@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SNP Dispatch — Book a Shipping Slot</title>
+
+  <!-- React 18 + Babel (loaded from CDN — no build step needed) -->
+  <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.23.3/babel.min.js"></script>
+
+  <style>
+    /* ── Reset ─────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue:       #2563eb;
+      --blue-d:     #1d4ed8;
+      --blue-bg:    #eff6ff;
+      --blue-mid:   #bfdbfe;
+      --green:      #16a34a;
+      --green-bg:   #f0fdf4;
+      --green-mid:  #bbf7d0;
+      --red:        #dc2626;
+      --red-bg:     #fef2f2;
+      --red-mid:    #fecaca;
+      --g50:  #f9fafb;
+      --g100: #f3f4f6;
+      --g200: #e5e7eb;
+      --g300: #d1d5db;
+      --g500: #6b7280;
+      --g700: #374151;
+      --g900: #111827;
+      --r: 10px;
+      --sh: 0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
+      --sh2: 0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1);
+    }
+    html { font-size:16px; }
+    body {
+      font-family: system-ui,-apple-system,'Segoe UI',sans-serif;
+      background: var(--g50);
+      color: var(--g700);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    button { font-family: inherit; cursor: pointer; }
+
+    /* ── App shell ──────────────────────────────────────────────────── */
+    .app { display:flex; flex-direction:column; min-height:100vh; }
+    .main { flex:1; padding:2rem 0; }
+
+    /* ── Header ─────────────────────────────────────────────────────── */
+    .hdr {
+      background:#fff;
+      border-bottom:1px solid var(--g200);
+      box-shadow:var(--sh);
+      position:sticky; top:0; z-index:100;
+    }
+    .hdr-inner {
+      max-width:900px; margin:0 auto;
+      padding:.875rem 1.5rem;
+      display:flex; align-items:center; justify-content:space-between; gap:1rem;
+    }
+    .hdr-brand { display:flex; align-items:center; gap:.75rem; }
+    .hdr-logo { font-size:2rem; line-height:1; }
+    .hdr-co { font-size:1.05rem; font-weight:700; color:var(--g900); }
+    .hdr-sub { font-size:.78rem; color:var(--g500); }
+    .hdr-nav { display:flex; gap:.5rem; }
+    .nav-btn {
+      padding:.45rem .95rem;
+      border:1.5px solid var(--g200);
+      background:#fff;
+      border-radius:6px;
+      font-size:.875rem; font-weight:500; color:var(--g700);
+      transition:all .15s;
+    }
+    .nav-btn:hover { border-color:var(--blue); color:var(--blue); }
+    .nav-btn.active { background:var(--blue); border-color:var(--blue); color:#fff; }
+
+    /* ── Footer ─────────────────────────────────────────────────────── */
+    .ftr {
+      text-align:center; padding:1.25rem;
+      font-size:.8rem; color:var(--g500);
+      border-top:1px solid var(--g200); background:#fff;
+    }
+
+    /* ── Container ──────────────────────────────────────────────────── */
+    .wrap { max-width:860px; margin:0 auto; padding:0 1.25rem; }
+    .wrap-lg { max-width:1000px; margin:0 auto; padding:0 1.25rem; }
+
+    /* ── Page header ────────────────────────────────────────────────── */
+    .pg-title { font-size:1.6rem; font-weight:700; color:var(--g900); margin-bottom:.35rem; }
+    .pg-desc { font-size:.925rem; color:var(--g500); margin-bottom:1.5rem; }
+
+    /* ── Card ───────────────────────────────────────────────────────── */
+    .card {
+      background:#fff; border:1px solid var(--g200);
+      border-radius:var(--r); box-shadow:var(--sh);
+      padding:1.5rem; margin-bottom:1.25rem;
+    }
+    .card-hdr {
+      display:flex; align-items:center; gap:.75rem;
+      margin-bottom:1.25rem; flex-wrap:wrap;
+    }
+    .card-title { font-size:1.05rem; font-weight:600; color:var(--g900); display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
+    .card-sub { font-size:.875rem; font-weight:400; color:var(--g500); }
+    .step-n {
+      width:28px; height:28px; background:var(--blue); color:#fff;
+      border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+      font-size:.8rem; font-weight:700; flex-shrink:0;
+    }
+
+    /* ── Date grid ──────────────────────────────────────────────────── */
+    .date-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:.75rem; }
+    .date-btn {
+      display:flex; flex-direction:column; align-items:center;
+      padding:.875rem .5rem; border:2px solid var(--g200);
+      background:#fff; border-radius:var(--r); transition:all .15s; gap:.2rem;
+    }
+    .date-btn:hover { border-color:var(--blue); background:var(--blue-bg); }
+    .date-btn.sel { border-color:var(--blue); background:var(--blue-bg); }
+    .db-day { font-size:.9rem; font-weight:700; color:var(--blue); }
+    .db-date { font-size:.82rem; color:var(--g700); }
+    .db-slots {
+      font-size:.75rem; background:var(--g100); color:var(--g500);
+      padding:.15rem .45rem; border-radius:99px; margin-top:.15rem;
+    }
+    .date-btn.sel .db-slots { background:var(--blue-mid); color:var(--blue-d); }
+
+    /* ── Slots ──────────────────────────────────────────────────────── */
+    .slots-meta {
+      display:flex; align-items:center; justify-content:space-between;
+      flex-wrap:wrap; gap:.5rem; margin-bottom:1rem;
+    }
+    .slots-avail { font-size:.875rem; color:var(--green); font-weight:600; }
+    .legend { display:flex; gap:.75rem; flex-wrap:wrap; }
+    .leg { display:flex; align-items:center; gap:.35rem; font-size:.78rem; color:var(--g500); }
+    .leg-dot { width:10px; height:10px; border-radius:50%; }
+    .leg-a { background:var(--green); }
+    .leg-b { background:var(--g300); }
+    .leg-s { background:var(--blue); }
+
+    .slots-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:.65rem; }
+    .slot-btn {
+      display:flex; flex-direction:column; align-items:flex-start;
+      padding:.8rem 1rem; border:2px solid var(--g200);
+      border-radius:var(--r); background:#fff; transition:all .15s;
+      text-align:left; gap:.15rem;
+    }
+    .slot-btn.avail:hover { border-color:var(--blue); background:var(--blue-bg); }
+    .slot-btn.avail.sel {
+      border-color:var(--blue); background:var(--blue-bg);
+      box-shadow:0 0 0 3px rgba(37,99,235,.15);
+    }
+    .slot-btn.taken { background:var(--g50); border-color:var(--g200); cursor:not-allowed; opacity:.6; }
+    .sn { font-size:.78rem; font-weight:600; color:var(--g500); text-transform:uppercase; letter-spacing:.04em; }
+    .st { font-size:.9rem; font-weight:600; color:var(--g900); }
+    .slot-btn.taken .st { color:var(--g500); }
+    .stag {
+      font-size:.72rem; padding:.15rem .45rem; border-radius:99px;
+      background:var(--g200); color:var(--g500); margin-top:.2rem;
+    }
+    .stag.sel-tag { background:var(--blue); color:#fff; }
+
+    /* ── Booking form ────────────────────────────────────────────────── */
+    .book-summary {
+      background:var(--blue-bg); border:1px solid var(--blue-mid);
+      border-radius:8px; padding:.875rem 1.1rem; margin-bottom:1.25rem;
+      display:flex; flex-direction:column; gap:.4rem;
+    }
+    .sum-row { display:flex; align-items:center; gap:.6rem; font-size:.925rem; color:var(--g900); font-weight:500; }
+    .lbl { display:block; font-size:.875rem; font-weight:600; color:var(--g700); margin-bottom:.45rem; }
+    .inp {
+      width:100%; padding:.65rem .9rem;
+      border:1.5px solid var(--g300); border-radius:8px;
+      font-size:.95rem; font-family:inherit; color:var(--g900);
+      background:#fff; transition:border-color .15s; outline:none;
+    }
+    .inp:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+    .bk-form { display:flex; flex-direction:column; gap:.65rem; }
+
+    /* ── Buttons ────────────────────────────────────────────────────── */
+    .btn {
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:.6rem 1.25rem; border-radius:8px;
+      font-size:.9rem; font-weight:600; font-family:inherit;
+      border:2px solid transparent; transition:all .15s; text-decoration:none;
+    }
+    .btn-p { background:var(--blue); color:#fff; border-color:var(--blue); }
+    .btn-p:hover { background:var(--blue-d); border-color:var(--blue-d); }
+    .btn-p:disabled { opacity:.65; cursor:not-allowed; }
+    .btn-o { background:#fff; color:var(--g700); border-color:var(--g300); }
+    .btn-o:hover { border-color:var(--g500); }
+    .btn-d { background:var(--red-bg); color:var(--red); border-color:var(--red-mid); }
+    .btn-d:hover { background:#fee2e2; }
+    .btn-sm { padding:.35rem .8rem; font-size:.8rem; }
+    .btn-full { width:100%; }
+    .lnk-btn {
+      background:none; border:none; padding:0;
+      font-size:.83rem; cursor:pointer; color:var(--blue);
+      font-family:inherit; text-decoration:underline;
+    }
+    .lnk-btn.dng { color:var(--red); }
+
+    /* ── Success ─────────────────────────────────────────────────────── */
+    .ok-card {
+      background:#fff; border:1px solid var(--g200); border-radius:var(--r);
+      box-shadow:var(--sh2); padding:2.5rem 2rem;
+      text-align:center; max-width:480px; margin:0 auto;
+    }
+    .ok-ico { font-size:3.5rem; margin-bottom:.75rem; }
+    .ok-title { font-size:1.5rem; font-weight:700; color:var(--g900); margin-bottom:.5rem; }
+    .ok-msg { color:var(--g500); margin-bottom:1.5rem; }
+    .ok-details {
+      background:var(--green-bg); border:1px solid var(--green-mid);
+      border-radius:8px; padding:1rem; margin-bottom:1.5rem; text-align:left;
+    }
+    .ok-row {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:.4rem 0; border-bottom:1px solid var(--green-mid); gap:1rem;
+    }
+    .ok-row:last-child { border-bottom:none; }
+    .ok-lbl { font-size:.85rem; color:var(--g500); font-weight:500; flex-shrink:0; }
+    .ok-val { font-size:.9rem; color:var(--g900); font-weight:600; text-align:right; }
+
+    /* ── Admin ───────────────────────────────────────────────────────── */
+    .login-wrap { display:flex; justify-content:center; padding-top:1rem; }
+    .login-card {
+      background:#fff; border:1px solid var(--g200); border-radius:var(--r);
+      box-shadow:var(--sh2); padding:2.5rem 2rem; width:100%; max-width:420px;
+    }
+    .login-ico { font-size:2.5rem; margin-bottom:.75rem; text-align:center; }
+    .login-title { font-size:1.4rem; font-weight:700; color:var(--g900); text-align:center; margin-bottom:.35rem; }
+    .login-desc { font-size:.875rem; color:var(--g500); text-align:center; margin-bottom:1.5rem; }
+
+    .adm-hdr { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:1.5rem; gap:1rem; }
+    .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem; margin-bottom:1.25rem; }
+    .stat {
+      background:#fff; border:1px solid var(--g200); border-radius:var(--r);
+      padding:1.1rem; text-align:center; box-shadow:var(--sh);
+    }
+    .stat-v { display:block; font-size:2rem; font-weight:700; color:var(--blue); line-height:1.1; }
+    .stat-l { display:block; font-size:.8rem; color:var(--g500); margin-top:.2rem; }
+
+    .adm-dates { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:.65rem; }
+    .adb {
+      display:flex; flex-direction:column; padding:.875rem;
+      border:2px solid var(--g200); border-radius:var(--r);
+      background:#fff; transition:all .15s; text-align:left; gap:.15rem;
+    }
+    .adb:hover { border-color:var(--blue); background:var(--blue-bg); }
+    .adb.sel { border-color:var(--blue); background:var(--blue-bg); }
+    .adb-day { font-size:.78rem; font-weight:700; color:var(--blue); text-transform:uppercase; letter-spacing:.04em; }
+    .adb-date { font-size:1rem; font-weight:700; color:var(--g900); }
+    .adb-stats { display:flex; gap:.5rem; margin-top:.25rem; }
+    .adb-bk { font-size:.75rem; color:var(--red); font-weight:600; }
+    .adb-av { font-size:.75rem; color:var(--green); font-weight:600; }
+    .adb-bar { height:4px; background:var(--g200); border-radius:99px; margin-top:.4rem; overflow:hidden; }
+    .adb-fill { height:100%; background:var(--blue); border-radius:99px; }
+
+    /* ── Table ───────────────────────────────────────────────────────── */
+    .tbl-wrap { overflow-x:auto; }
+    .tbl { width:100%; border-collapse:collapse; font-size:.875rem; }
+    .tbl th {
+      text-align:left; padding:.65rem .875rem;
+      background:var(--g50); border-bottom:1.5px solid var(--g200);
+      font-weight:600; color:var(--g700); font-size:.8rem;
+      text-transform:uppercase; letter-spacing:.04em; white-space:nowrap;
+    }
+    .tbl td { padding:.7rem .875rem; border-bottom:1px solid var(--g100); vertical-align:middle; }
+    .tbl tr:last-child td { border-bottom:none; }
+    .tbl tr:hover td { background:var(--g50); }
+
+    .slot-badge {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:28px; height:28px; background:var(--blue-bg); color:var(--blue);
+      border-radius:6px; font-weight:700; font-size:.8rem;
+    }
+    .grp-hdr {
+      display:flex; align-items:center; gap:.75rem;
+      padding:.6rem 0; border-bottom:2px solid var(--g200);
+      margin-bottom:.75rem; flex-wrap:wrap;
+    }
+    .grp-day {
+      font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+      background:var(--blue); color:#fff; padding:.2rem .6rem; border-radius:4px;
+    }
+    .grp-date { font-size:.95rem; font-weight:600; color:var(--g900); }
+    .grp-sec { margin-bottom:1.75rem; }
+    .grp-sec:last-child { margin-bottom:0; }
+    .badge {
+      background:var(--g100); color:var(--g700);
+      font-size:.78rem; font-weight:600; padding:.2rem .55rem; border-radius:99px;
+    }
+    .confirm-del { font-size:.83rem; white-space:nowrap; }
+
+    /* ── Misc ────────────────────────────────────────────────────────── */
+    .muted { color:var(--g500); }
+    .sm { font-size:.82rem; }
+    .err {
+      color:var(--red); background:var(--red-bg);
+      border:1px solid var(--red-mid); border-radius:7px;
+      padding:.6rem .9rem; font-size:.875rem;
+    }
+    .empty { color:var(--g500); font-size:.9rem; padding:1rem 0; text-align:center; }
+    .loading { color:var(--g500); font-style:italic; font-size:.9rem; padding:.5rem 0; }
+
+    /* ── Responsive ──────────────────────────────────────────────────── */
+    @media(max-width:600px){
+      .hdr-inner { padding:.75rem 1rem; }
+      .stats { grid-template-columns:repeat(3,1fr); gap:.5rem; }
+      .stat-v { font-size:1.5rem; }
+      .card { padding:1.1rem; }
+      .pg-title { font-size:1.3rem; }
+      .slots-grid { grid-template-columns:repeat(2,1fr); }
+      .date-grid { grid-template-columns:repeat(2,1fr); }
+      .ok-card { padding:1.75rem 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+/* ── helpers ─────────────────────────────────────────────────────────── */
+function fmtDate(ds) {
+  const d = new Date(ds + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+}
+function shortDate(ds) {
+  const d = new Date(ds + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+}
+function fmtTs(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts.replace(' ', 'T') + 'Z');
+  return d.toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+/* ══ CUSTOMER VIEW ═══════════════════════════════════════════════════ */
+function CustomerView() {
+  const [dates, setDates]         = useState([]);
+  const [selDate, setSelDate]     = useState(null);
+  const [slots, setSlots]         = useState([]);
+  const [selSlot, setSelSlot]     = useState(null);
+  const [name, setName]           = useState('');
+  const [loading, setLoading]     = useState(false);
+  const [slotsLoad, setSlotsLoad] = useState(false);
+  const [error, setError]         = useState('');
+  const [success, setSuccess]     = useState(null);
+
+  useEffect(() => {
+    fetch('/api/dates').then(r => r.json()).then(setDates).catch(() => setError('Could not load dates.'));
+  }, []);
+
+  useEffect(() => {
+    if (!selDate) return;
+    setSlotsLoad(true); setSelSlot(null); setError('');
+    fetch(`/api/slots/${selDate}`)
+      .then(r => r.json())
+      .then(d => { setSlots(d); setSlotsLoad(false); })
+      .catch(() => { setError('Could not load slots.'); setSlotsLoad(false); });
+  }, [selDate]);
+
+  function pickDate(ds) {
+    setSelDate(ds); setSuccess(null); setError(''); setName('');
+  }
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!name.trim()) return setError('Please enter your name.');
+    if (!selSlot) return setError('Please select a time slot.');
+    setLoading(true); setError('');
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ name: name.trim(), date: selDate, slot_number: selSlot.number }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Booking failed');
+      setSuccess({ name: name.trim(), date: selDate, slot: selSlot });
+      setName(''); setSelSlot(null);
+      const updated = await fetch(`/api/slots/${selDate}`).then(r => r.json());
+      setSlots(updated);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function reset() {
+    setSuccess(null); setSelDate(null); setSlots([]); setSelSlot(null); setName(''); setError('');
+  }
+
+  if (success) return (
+    <div className="wrap">
+      <div className="ok-card">
+        <div className="ok-ico">✅</div>
+        <h2 className="ok-title">Booking Confirmed!</h2>
+        <p className="ok-msg">Your shipping slot is reserved. Please arrive on time.</p>
+        <div className="ok-details">
+          {[['Name', success.name], ['Date', fmtDate(success.date)], ['Slot', `Slot ${success.slot.number}`]].map(([l,v]) => (
+            <div className="ok-row" key={l}>
+              <span className="ok-lbl">{l}</span>
+              <span className="ok-val">{v}</span>
+            </div>
+          ))}
+        </div>
+        <button className="btn btn-p" onClick={reset}>Book Another Slot</button>
+      </div>
+    </div>
+  );
+
+  const avail = slots.filter(s => !s.booked).length;
+
+  return (
+    <div className="wrap">
+      <h1 className="pg-title">Book a Shipping Slot</h1>
+      <p className="pg-desc">
+        Slots available on <strong>Mondays</strong> (8 slots) and <strong>Thursdays</strong> (10 slots).
+        Select a date, pick your time window, then enter your name.
+      </p>
+
+      {/* Step 1 – Date */}
+      <div className="card">
+        <div className="card-hdr">
+          <span className="step-n">1</span>
+          <h2 className="card-title">Select a Date</h2>
+        </div>
+        {dates.length === 0
+          ? <p className="loading">Loading dates…</p>
+          : <div className="date-grid">
+              {dates.map(d => (
+                <button
+                  key={d.date}
+                  className={`date-btn${selDate === d.date ? ' sel' : ''}`}
+                  onClick={() => pickDate(d.date)}
+                >
+                  <span className="db-day">{d.dayName}</span>
+                  <span className="db-date">{shortDate(d.date)}</span>
+                  <span className="db-slots">{d.totalSlots} slots</span>
+                </button>
+              ))}
+            </div>
+        }
+      </div>
+
+      {/* Step 2 – Slot */}
+      {selDate && (
+        <div className="card">
+          <div className="card-hdr">
+            <span className="step-n">2</span>
+            <h2 className="card-title">
+              Select a Time Slot
+              <span className="card-sub">{fmtDate(selDate)}</span>
+            </h2>
+          </div>
+          {slotsLoad
+            ? <p className="loading">Loading slots…</p>
+            : <>
+                <div className="slots-meta">
+                  <span className="slots-avail">{avail} of {slots.length} slots available</span>
+                  <div className="legend">
+                    <span className="leg"><span className="leg-dot leg-a" />Available</span>
+                    <span className="leg"><span className="leg-dot leg-b" />Taken</span>
+                    <span className="leg"><span className="leg-dot leg-s" />Selected</span>
+                  </div>
+                </div>
+                <div className="slots-grid">
+                  {slots.map(sl => (
+                    <button
+                      key={sl.number}
+                      disabled={sl.booked}
+                      className={`slot-btn ${sl.booked ? 'taken' : 'avail'}${selSlot?.number === sl.number ? ' sel' : ''}`}
+                      onClick={() => { if (!sl.booked) { setSelSlot(sl); setError(''); } }}
+                    >
+                      <span className="st">Slot {sl.number}</span>
+                      {sl.booked && <span className="stag">Taken</span>}
+                      {!sl.booked && selSlot?.number === sl.number && <span className="stag sel-tag">Selected ✓</span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+          }
+        </div>
+      )}
+
+      {/* Step 3 – Name */}
+      {selSlot && (
+        <div className="card">
+          <div className="card-hdr">
+            <span className="step-n">3</span>
+            <h2 className="card-title">Confirm Booking</h2>
+          </div>
+          <div className="book-summary">
+            <div className="sum-row"><span>📅</span><span>{fmtDate(selDate)}</span></div>
+            <div className="sum-row"><span>📦</span><span>Slot {selSlot.number}</span></div>
+          </div>
+          <form onSubmit={submit} className="bk-form">
+            <div>
+              <label className="lbl" htmlFor="cname">Your Full Name</label>
+              <input
+                id="cname" type="text" className="inp"
+                placeholder="e.g. John Smith"
+                value={name} onChange={e => setName(e.target.value)}
+                maxLength={100} autoFocus
+              />
+            </div>
+            {error && <p className="err">⚠ {error}</p>}
+            <button type="submit" className="btn btn-p btn-full" disabled={loading}>
+              {loading ? 'Booking…' : 'Confirm Booking'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {error && !selSlot && <p className="err" style={{marginTop:'.5rem'}}>⚠ {error}</p>}
+    </div>
+  );
+}
+
+/* ══ ADMIN LOGIN ════════════════════════════════════════════════════ */
+function LoginScreen({ onLogin }) {
+  const [pw, setPw]       = useState('');
+  const [err, setErr]     = useState('');
+  const [busy, setBusy]   = useState(false);
+
+  async function submit(e) {
+    e.preventDefault(); setBusy(true); setErr('');
+    try {
+      const res = await fetch('/api/admin/login', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ password: pw }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Login failed');
+      onLogin(d.token);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="wrap">
+      <div className="login-wrap">
+        <div className="login-card">
+          <div className="login-ico">🔐</div>
+          <h2 className="login-title">Admin Login</h2>
+          <p className="login-desc">Enter the admin password to access the booking dashboard.</p>
+          <form onSubmit={submit}>
+            <label className="lbl" htmlFor="apw">Password</label>
+            <input
+              id="apw" type="password" className="inp"
+              placeholder="Admin password"
+              value={pw} onChange={e => setPw(e.target.value)} autoFocus
+            />
+            {err && <p className="err" style={{marginTop:'.75rem'}}>⚠ {err}</p>}
+            <button
+              type="submit" className="btn btn-p btn-full"
+              style={{marginTop:'1rem'}} disabled={busy}
+            >
+              {busy ? 'Logging in…' : 'Login'}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══ ADMIN DASHBOARD ════════════════════════════════════════════════ */
+function Dashboard({ token, onLogout }) {
+  const [summary, setSummary]   = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [selDate, setSelDate]   = useState(null);
+  const [loading, setLoading]   = useState(false);
+  const [err, setErr]           = useState('');
+  const [delId, setDelId]       = useState(null);
+
+  const hdrs = { Authorization: `Bearer ${token}` };
+
+  const loadSummary = useCallback(async () => {
+    const res = await fetch('/api/admin/summary', { headers: hdrs });
+    if (res.status === 401) return onLogout();
+    setSummary(await res.json());
+  }, [token]);
+
+  const loadBookings = useCallback(async (date) => {
+    setLoading(true); setErr('');
+    const url = date ? `/api/admin/bookings?date=${date}` : '/api/admin/bookings';
+    const res = await fetch(url, { headers: hdrs });
+    if (res.status === 401) return onLogout();
+    setBookings(await res.json());
+    setLoading(false);
+  }, [token]);
+
+  useEffect(() => {
+    loadSummary();
+    loadBookings(null);
+  }, []);
+
+  function toggleDate(d) {
+    const next = selDate === d ? null : d;
+    setSelDate(next);
+    loadBookings(next);
+  }
+
+  async function doDelete(id) {
+    const res = await fetch(`/api/admin/bookings/${id}`, { method:'DELETE', headers: hdrs });
+    if (!res.ok) return setErr('Delete failed');
+    setDelId(null);
+    loadSummary();
+    loadBookings(selDate);
+  }
+
+  const grouped = bookings.reduce((a, b) => { (a[b.date] = a[b.date]||[]).push(b); return a; }, {});
+  const gDates  = Object.keys(grouped).sort();
+  const total   = summary.reduce((a, d) => a + d.booked, 0);
+  const totalAv = summary.reduce((a, d) => a + d.available, 0);
+
+  const BookingRow = ({ b }) => (
+    <tr>
+      <td><span className="slot-badge">{b.slot_number}</span></td>
+      <td><strong>{b.name}</strong></td>
+      <td className="muted sm">{fmtTs(b.created_at)}</td>
+      <td>
+        {delId === b.id
+          ? <span className="confirm-del">
+              Sure?{' '}
+              <button className="lnk-btn dng" onClick={() => doDelete(b.id)}>Yes, cancel</button>
+              {' · '}
+              <button className="lnk-btn" onClick={() => setDelId(null)}>No</button>
+            </span>
+          : <button className="btn btn-sm btn-d" onClick={() => setDelId(b.id)}>Cancel</button>
+        }
+      </td>
+    </tr>
+  );
+
+  const BookingTable = ({ rows }) => (
+    <div className="tbl-wrap">
+      <table className="tbl">
+        <thead>
+          <tr>
+            <th>Slot #</th><th>Customer Name</th><th>Booked At</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody>{rows.map(b => <BookingRow key={b.id} b={b} />)}</tbody>
+      </table>
+    </div>
+  );
+
+  return (
+    <div className="wrap-lg">
+      <div className="adm-hdr">
+        <div>
+          <h1 className="pg-title">Admin Dashboard</h1>
+          <p className="pg-desc">View and manage all shipping slot bookings.</p>
+        </div>
+        <button className="btn btn-o" onClick={onLogout}>Logout</button>
+      </div>
+
+      {err && <p className="err" style={{marginBottom:'1rem'}}>⚠ {err}</p>}
+
+      <div className="stats">
+        <div className="stat"><span className="stat-v">{total}</span><span className="stat-l">Total Bookings</span></div>
+        <div className="stat"><span className="stat-v">{totalAv}</span><span className="stat-l">Available Slots</span></div>
+        <div className="stat"><span className="stat-v">{summary.length}</span><span className="stat-l">Upcoming Dates</span></div>
+      </div>
+
+      {/* Date filter */}
+      <div className="card">
+        <div className="card-hdr">
+          <h2 className="card-title">Filter by Date</h2>
+          {selDate && (
+            <button className="btn btn-sm btn-o" onClick={() => { setSelDate(null); loadBookings(null); }}>
+              Clear filter
+            </button>
+          )}
+        </div>
+        <div className="adm-dates">
+          {summary.map(d => (
+            <button
+              key={d.date}
+              className={`adb${selDate === d.date ? ' sel' : ''}`}
+              onClick={() => toggleDate(d.date)}
+            >
+              <span className="adb-day">{d.dayName}</span>
+              <span className="adb-date">
+                {new Date(d.date+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}
+              </span>
+              <div className="adb-stats">
+                <span className="adb-bk">{d.booked} booked</span>
+                <span className="adb-av">{d.available} free</span>
+              </div>
+              <div className="adb-bar">
+                <div className="adb-fill" style={{width:`${(d.booked/d.totalSlots)*100}%`}} />
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Bookings */}
+      <div className="card">
+        <div className="card-hdr">
+          <h2 className="card-title">
+            {selDate ? `Bookings — ${fmtDate(selDate)}` : 'All Upcoming Bookings'}
+          </h2>
+          <span className="badge">{bookings.length} booking{bookings.length !== 1 ? 's' : ''}</span>
+        </div>
+
+        {loading && <p className="loading">Loading bookings…</p>}
+        {!loading && bookings.length === 0 && <p className="empty">No bookings for this selection.</p>}
+
+        {!loading && bookings.length > 0 && (
+          selDate
+            ? <BookingTable rows={bookings} />
+            : gDates.map(date => (
+                <div key={date} className="grp-sec">
+                  <div className="grp-hdr">
+                    <span className="grp-day">
+                      {new Date(date+'T00:00:00').getDay() === 1 ? 'Monday' : 'Thursday'}
+                    </span>
+                    <span className="grp-date">{fmtDate(date)}</span>
+                    <span className="badge">{grouped[date].length} booking{grouped[date].length !== 1 ? 's' : ''}</span>
+                  </div>
+                  <BookingTable rows={grouped[date]} />
+                </div>
+              ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ══ ADMIN VIEW (login gate) ═════════════════════════════════════════ */
+function AdminView() {
+  const [token, setToken] = useState(() => sessionStorage.getItem('admin_tok') || null);
+  function login(t)  { sessionStorage.setItem('admin_tok', t); setToken(t); }
+  function logout()  { sessionStorage.removeItem('admin_tok'); setToken(null); }
+  return token ? <Dashboard token={token} onLogout={logout} /> : <LoginScreen onLogin={login} />;
+}
+
+/* ══ APP ROOT ════════════════════════════════════════════════════════ */
+function App() {
+  const [view, setView]       = useState('customer');
+  const [coName, setCoName]   = useState('Shipping Co');
+
+  useEffect(() => {
+    fetch('/api/config').then(r => r.json())
+      .then(d => { if (d.companyName) setCoName(d.companyName); })
+      .catch(() => {});
+  }, []);
+
+  return (
+    <div className="app">
+      <header className="hdr">
+        <div className="hdr-inner">
+          <div className="hdr-brand">
+            <div className="hdr-logo">📦</div>
+            <div>
+              <div className="hdr-co">{coName}</div>
+              <div className="hdr-sub">Shipping Slot Booking</div>
+            </div>
+          </div>
+          <nav className="hdr-nav">
+            <button className={`nav-btn${view==='customer'?' active':''}`} onClick={() => setView('customer')}>
+              Book a Slot
+            </button>
+            <button className={`nav-btn${view==='admin'?' active':''}`} onClick={() => setView('admin')}>
+              Admin
+            </button>
+          </nav>
+        </div>
+      </header>
+
+      <main className="main">
+        {view === 'customer' ? <CustomerView /> : <AdminView />}
+      </main>
+
+      <footer className="ftr">
+        <p>© {new Date().getFullYear()} {coName}. All rights reserved.</p>
+      </footer>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
