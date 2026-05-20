@@ -1,0 +1,2 @@
+# Python standard library only — no external packages required.
+# This file ensures the build system detects the project as Python.
