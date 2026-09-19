@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
+import { getCustomer } from "../../../lib/customer-auth";
 import { availability } from "../../../lib/db";
 export const dynamic = "force-dynamic";
 export async function GET() {
   try {
+    if (!(await getCustomer()))
+      return NextResponse.json({ error: "Please sign in." }, { status: 401 });
     const data = await availability();
     return NextResponse.json(
       {
@@ -13,7 +16,7 @@ export async function GET() {
         },
         days: data.days.map((day) => ({
           date: day.date,
-          remaining: day.slots.reduce((n, s) => n + s.remaining, 0),
+          available: day.slots.some((s) => s.remaining > 0),
         })),
       },
       {

@@ -1,3 +1,4 @@
+import { getCustomer } from "../../../lib/customer-auth";
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { pool, rateLimit, transaction } from "../../../lib/db";
@@ -21,6 +22,12 @@ export async function POST(request: NextRequest) {
       { status: 503 },
     );
   try {
+    const customer = await getCustomer();
+    if (!customer)
+      return NextResponse.json(
+        { error: "Please sign in with a verified customer account." },
+        { status: 401 },
+      );
     if (!(await rateLimit(clientKey(request, "booking"), 20, 3600)))
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
@@ -31,7 +38,10 @@ export async function POST(request: NextRequest) {
       const settings = (
         await db.query("SELECT value FROM settings WHERE id=1 FOR SHARE")
       ).rows[0].value as Settings;
-      const v = validateBooking(input, settings);
+      const v = validateBooking(
+        { ...input, name: customer.name, email: customer.email },
+        settings,
+      );
       await db.query("SELECT pg_advisory_xact_lock(hashtext($1))", [v.date]);
       const existing = (
         await db.query("SELECT * FROM bookings WHERE request_id=$1", [
@@ -44,6 +54,7 @@ export async function POST(request: NextRequest) {
             "This request was cancelled. Reload the page to make a new booking.",
           );
         if (
+          existing.customer_id !== customer.id ||
           existing.name !== v.name ||
           existing.email !== v.email ||
           existing.dispatch_date !== v.date
@@ -66,7 +77,7 @@ export async function POST(request: NextRequest) {
         reference = "SNP-" + randomUUID().slice(0, 8).toUpperCase();
       const b = (
         await db.query(
-          "INSERT INTO bookings(id,request_id,reference,name,email,dispatch_date,slot,timezone) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *",
+          "INSERT INTO bookings(id,request_id,reference,name,email,dispatch_date,slot,timezone,customer_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *",
           [
             id,
             v.requestId,
@@ -76,6 +87,7 @@ export async function POST(request: NextRequest) {
             v.date,
             assignedSlot,
             settings.timezone,
+            customer.id,
           ],
         )
       ).rows[0];

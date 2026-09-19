@@ -3,7 +3,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "SNP Dispatch | Book your dispatch",
   description:
-    "Choose an available shipment dispatch slot on Monday, Wednesday or Friday.",
+    "Sign in to book your shipment dispatch date on Monday, Wednesday or Friday.",
   icons: { icon: "/favicon.svg" },
 };
 export default function RootLayout({

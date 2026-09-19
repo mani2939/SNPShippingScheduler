@@ -840,3 +840,132 @@ td small {
     transition: none !important;
   }
 }
+
+.account-main {
+  max-width: 540px;
+  margin: 42px auto;
+  padding: 0 20px 30px;
+}
+.account-card {
+  padding: 32px;
+}
+.account-symbol {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--lime);
+  margin-bottom: 24px;
+}
+.account-card h1 {
+  font-size: 32px;
+  letter-spacing: -1px;
+  margin: 12px 0;
+}
+.account-card > .muted {
+  margin-bottom: 24px;
+  font-size: 16px;
+}
+.account-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 24px;
+}
+.account-tabs button {
+  flex: 1;
+  padding: 12px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  font-size: 16px;
+}
+.account-tabs button[aria-pressed="true"] {
+  border-bottom-color: var(--ink);
+  font-weight: 700;
+}
+.account-fields {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  min-width: 0;
+}
+.account-fields input {
+  margin-bottom: 18px;
+  font-size: 16px;
+}
+.account-fields .primary {
+  margin-top: 24px;
+}
+.password-hint {
+  font-size: 13px;
+  color: var(--muted);
+  margin: -7px 0 18px;
+}
+.account-links {
+  display: flex;
+  gap: 15px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+.account-links button {
+  border: 0;
+  background: transparent;
+  text-decoration: underline;
+  padding: 0;
+  font-size: 14px;
+}
+.account-footer {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.account-card .status-message {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 14px;
+}
+.account-card .status-message svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.customer-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 25px;
+  overflow-wrap: anywhere;
+}
+.customer-identity > span {
+  color: var(--muted);
+  font-size: 14px;
+}
+.customer-identity p {
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 10px;
+}
+@media (max-width: 650px) {
+  .account-card {
+    padding: 24px;
+  }
+  .account-card h1 {
+    font-size: 29px;
+  }
+  .account-main {
+    margin-top: 28px;
+  }
+  .header .action-row {
+    gap: 10px;
+  }
+  .header .action-row .admin-link {
+    font-size: 12px;
+  }
+  .header .brand {
+    font-size: 21px;
+  }
+}

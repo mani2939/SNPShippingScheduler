@@ -3,7 +3,7 @@
 Customer booking site and username-and-password-protected admin portal, prepared for Vercel and `snpdispatch.com`.
 
 - Mondays, Wednesdays and Fridays only.
-- Exactly three places per day. Customers select only a date and see the remaining count; the server assigns an internal slot automatically. No appointment times.
+- Exactly three places per day. Verified customers select only an available date; capacity counts are private and the server assigns an internal slot automatically. No appointment times.
 - Customer name and email, on-page confirmation and a booking reference.
 - PostgreSQL transactions and a unique index prevent overbooking, including simultaneous requests.
 - Email confirmations through Resend; business WhatsApp alerts through Twilio.
@@ -11,7 +11,7 @@ Customer booking site and username-and-password-protected admin portal, prepared
 
 ## Current state
 
-The code builds and can run locally. It has **not been deployed**. No database, admin password, email sender or WhatsApp API credentials have been connected. Without a database the customer page runs in a clearly labelled, read-only preview mode and cannot accept bookings. The admin portal always requires authentication and never exposes a public preview. No real email or WhatsApp messages have been sent.
+The code builds and can run locally. It has **not been deployed**. No database, admin password, email sender or WhatsApp API credentials have been connected. Without a database the account screens remain visible, but accounts and bookings are unavailable. The admin portal always requires authentication and never exposes a public preview. No real email or WhatsApp messages have been sent.
 
 Default operational choices: Europe/London timezone, 42-day booking window, no same-day bookings. Admin can change timezone and booking horizon. Cancellation releases the slot but does not email the customer; the confirmation prompt tells the administrator to contact them directly.
 
@@ -25,7 +25,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open `http://127.0.0.1:3000`, or `/admin` for the admin view. Leave DATABASE_URL empty for read-only preview. To enable bookings, supply a PostgreSQL connection and run `npm run db:setup`.
+Open `http://127.0.0.1:3000`, or `/admin` for the admin view. Leave DATABASE_URL empty to preview the account screens only. To enable bookings, supply a PostgreSQL connection and run `npm run db:setup`.
 
 ## Connect services and deploy
 
@@ -75,10 +75,20 @@ npm run build
 
 Tests cover allowed dates, UK daylight saving/date boundaries, booking validation, fixed capacity, PostgreSQL unique constraints, releasing cancelled slots, duplicate request IDs, and transaction rollback. Provider deliveries and custom-domain deployment require connected accounts and must be checked after configuration.
 
-## Updated customer and admin flow
+## Customer accounts and private capacity
 
-- `/` always opens the customer booking page, even if the administrator is signed in.
-- Customers choose a date and provide their name/email. Each date shows “Only X slots left”; there is no slot picker. Full dates are disabled.
-- Public availability responses expose daily counts, not internal slot IDs. Booking requests do not require a slot. Date-level transaction locks and the existing unique index protect the three-place limit. Existing databases/bookings remain compatible; no new schema migration is needed for this change.
-- `/admin` requires both `ADMIN_USERNAME` and the password corresponding to `ADMIN_PASSWORD_HASH`. Set `SESSION_SECRET` as before. Previous sessions without a username are invalidated. There is no default password.
-- The secret-generation script prints an example username and a random password/hash. Store the generated password securely. Enter configuration in Vercel's environment variables and redeploy; do not commit secrets.
+- `/` is the customer entry point. Signed-out visitors go to `/account` to sign in or register; signed-in, verified customers see the booking calendar.
+- Registration collects name, email and a password of 12–128 characters. A Resend email asks the customer to verify their email and confirm the password they chose. Access is automatically approved after verification; no manual admin approval is required.
+- Forgot-password and resend-verification links are on the sign-in page. Reset links expire after 30 minutes; verification links expire after 24 hours. Tokens are hashed in the database and usable once. Resetting a password invalidates all customer sessions. Sessions use secure, HttpOnly cookies and expire after seven days.
+- Bookings use the authenticated customer's saved name/email, ignoring any name/email supplied by the browser. Guest and unverified bookings are rejected by the server. Existing bookings remain intact; new bookings include a customer ID.
+- Customers see only date availability (Available/Unavailable), never capacity counts or internal slot IDs. The backend still enforces three dispatch reservations per eligible day. Admin capacity controls remain private.
+- Admin login remains separate at `/admin`, using `ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH` and `SESSION_SECRET`. Registering a customer never grants admin access.
+
+### Deploy this account update
+
+1. Upload the complete updated source, including the `lib` folder and the new account pages. Keep `lib/` out of `.gitignore`.
+2. **Run `npm run db:setup` against your production database before deployment.** The repeatable schema creates customer, session and email-token tables and adds nullable `customer_id` to bookings without deleting existing records. Set `DATABASE_URL` locally using `.env.local`; never commit it.
+3. In Vercel Production, configure `DATABASE_URL`, `APP_URL=https://snpdispatch.com`, `RESEND_API_KEY`, `EMAIL_FROM` (using a Resend-verified domain), and the existing admin variables. APP_URL must be the public HTTPS address where customers can open email links. Do not use the localhost preview address for production emails.
+4. Redeploy. Register using an email you own, verify it, sign in and book. Then test forgot-password, confirm that the old password stops working and old sessions are signed out. These live email checks require your configured services; they have not been run against your production account here.
+
+The local account forms render without credentials, but submitting them requires the configured database and email service. There is no public booking or admin demo bypass.

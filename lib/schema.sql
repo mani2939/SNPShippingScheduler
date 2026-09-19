@@ -16,3 +16,21 @@ CREATE TABLE IF NOT EXISTS notifications (
  attempts integer NOT NULL DEFAULT 0, provider_id text, last_error text, updated_at timestamptz NOT NULL DEFAULT now(), UNIQUE(booking_id,channel)
 );
 CREATE TABLE IF NOT EXISTS rate_limits (key text PRIMARY KEY, hits integer NOT NULL, expires_at timestamptz NOT NULL);
+
+-- Customer accounts: safe to apply to existing installations.
+CREATE TABLE IF NOT EXISTS customers (
+ id uuid PRIMARY KEY, name text NOT NULL, email text UNIQUE NOT NULL,
+ password_hash text NOT NULL, email_verified boolean NOT NULL DEFAULT false,
+ created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS customer_sessions (
+ token_hash text PRIMARY KEY, customer_id uuid NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+ expires_at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS customer_sessions_owner ON customer_sessions(customer_id);
+CREATE TABLE IF NOT EXISTS customer_tokens (
+ token_hash text PRIMARY KEY, customer_id uuid NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+ purpose text NOT NULL CHECK(purpose IN ('verify','reset')), expires_at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS customer_tokens_owner ON customer_tokens(customer_id);
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_id uuid REFERENCES customers(id);
