@@ -102,3 +102,7 @@ The first migration adopts existing installations and preserves bookings and set
 For future database changes, add a new numbered SQL file such as `migrations/0002_add_column.sql`. Never edit an applied migration. Keep migrations compatible with the currently deployed app, because schema changes commit before the new app finishes building. Use transactional SQL; do not include `BEGIN`, `COMMIT`, or `CREATE INDEX CONCURRENTLY` in migration files. `lib/schema.sql` is the initial schema reference used by application tests; editing it alone does not deploy a database change.
 
 Manual execution remains available with `npm run db:migrate` (`npm run db:setup` is an alias). Successful Vercel logs show `Database ready: N migration(s) applied.` No connection strings are printed. Tests cover fresh installation, adoption of existing bookings, repeat deployments, checksum mismatch, rollback and missing configuration. Live Neon execution still needs a deployment in your connected Vercel project.
+
+### PostgreSQL SSL mode
+
+Use `sslmode=verify-full` in `SNP_DATABASE_URL` to explicitly verify the server certificate and hostname. Both the app and migration runner normalize the legacy `prefer`, `require`, and `verify-ca` URL modes to `verify-full`, preserving pg 8’s existing verification behavior and avoiding its SSL-mode warning. Other connection parameters remain unchanged.

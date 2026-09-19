@@ -1,10 +1,11 @@
+import { databaseURL } from "./database-url.mjs";
 import { Pool, type PoolClient } from "pg";
 import { defaults, dispatchDates, type Settings } from "./schedule";
 const globalDB = globalThis as unknown as { snpPool?: Pool };
 export function pool() {
   if (!process.env.SNP_DATABASE_URL) throw new Error("Database is not configured.");
   return (globalDB.snpPool ??= new Pool({
-    connectionString: process.env.SNP_DATABASE_URL,
+    connectionString: databaseURL(process.env.SNP_DATABASE_URL),
     max: 3,
     connectionTimeoutMillis: 8000,
     idleTimeoutMillis: 10000,

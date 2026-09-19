@@ -1,3 +1,4 @@
+import { databaseURL } from "../lib/database-url.mjs";
 import { Pool } from "pg";
 import { migrate, readMigrations } from "./migrations.mjs";
 
@@ -8,7 +9,7 @@ if (!process.env.SNP_DATABASE_URL) {
   process.exitCode = 1;
 } else {
   const pool = new Pool({
-    connectionString: process.env.SNP_DATABASE_URL,
+    connectionString: databaseURL(process.env.SNP_DATABASE_URL),
     max: 1,
     connectionTimeoutMillis: 15000,
     application_name: "snp-dispatch-migrations",
