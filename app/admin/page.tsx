@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Package, ArrowUpRight, LogOut, RefreshCw } from "lucide-react";
-import { dateLabel, today, type Settings } from "@/lib/schedule";
+import { dateLabel, today, type Settings } from "../../lib/schedule";
 type Booking = {
   id: string;
   reference: string;

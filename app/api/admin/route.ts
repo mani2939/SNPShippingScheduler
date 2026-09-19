@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { pool, rateLimit, transaction, availability } from "@/lib/db";
+import { pool, rateLimit, transaction, availability } from "../../../lib/db";
 import {
   adminConfigured,
   passwordMatches,
@@ -8,14 +8,14 @@ import {
   sameOrigin,
   clientKey,
   smallJSON,
-} from "@/lib/security";
-import { connections, sendNotifications } from "@/lib/notifications";
+} from "../../../lib/security";
+import { connections, sendNotifications } from "../../../lib/notifications";
 import {
   defaults,
   eligible,
   validateSettings,
   type Settings,
-} from "@/lib/schedule";
+} from "../../../lib/schedule";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 export async function GET() {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { availability } from "@/lib/db";
+import { availability } from "../../../lib/db";
 export const dynamic = "force-dynamic";
 export async function GET() {
   try {

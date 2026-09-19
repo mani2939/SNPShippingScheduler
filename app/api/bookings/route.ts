@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { pool, rateLimit, transaction } from "@/lib/db";
-import { validateBooking, type Settings } from "@/lib/schedule";
-import { clientKey, sameOrigin, smallJSON } from "@/lib/security";
-import { sendNotifications } from "@/lib/notifications";
+import { pool, rateLimit, transaction } from "../../../lib/db";
+import { validateBooking, type Settings } from "../../../lib/schedule";
+import { clientKey, sameOrigin, smallJSON } from "../../../lib/security";
+import { sendNotifications } from "../../../lib/notifications";
 export const maxDuration = 60;
 export async function POST(request: NextRequest) {
   if (!sameOrigin(request))

@@ -13,7 +13,7 @@ import {
   Mail,
   LoaderCircle,
 } from "lucide-react";
-import { defaults, dateLabel, type Settings } from "@/lib/schedule";
+import { defaults, dateLabel, type Settings } from "../lib/schedule";
 type Day = { date: string; slots: { id: string; remaining: number }[] };
 export default function BookingPage() {
   const [settings, setSettings] = useState<Settings>(defaults),
