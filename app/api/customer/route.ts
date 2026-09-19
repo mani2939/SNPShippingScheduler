@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     const input = await smallJSON(request);
     if (input.action === "logout") {
       const token = (await cookies()).get(customerCookie)?.value;
-      if (process.env.DATABASE_URL && token && validToken(token))
+      if (process.env.SNP_DATABASE_URL && token && validToken(token))
         await pool().query(
           "DELETE FROM customer_sessions WHERE token_hash=$1",
           [tokenHash(token)],
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       });
       return r;
     }
-    if (!process.env.DATABASE_URL)
+    if (!process.env.SNP_DATABASE_URL)
       return reply(
         {
           error: "Customer accounts are not open yet. Please try again later.",

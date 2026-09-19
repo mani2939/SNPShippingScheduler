@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       { error: "Please submit from the booking page." },
       { status: 403 },
     );
-  if (!process.env.DATABASE_URL)
+  if (!process.env.SNP_DATABASE_URL)
     return NextResponse.json(
       { error: "Bookings are not open yet." },
       { status: 503 },

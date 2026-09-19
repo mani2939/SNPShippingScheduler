@@ -2,9 +2,9 @@ import { Pool, type PoolClient } from "pg";
 import { defaults, dispatchDates, type Settings } from "./schedule";
 const globalDB = globalThis as unknown as { snpPool?: Pool };
 export function pool() {
-  if (!process.env.DATABASE_URL) throw new Error("Database is not configured.");
+  if (!process.env.SNP_DATABASE_URL) throw new Error("Database is not configured.");
   return (globalDB.snpPool ??= new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: process.env.SNP_DATABASE_URL,
     max: 3,
     connectionTimeoutMillis: 8000,
     idleTimeoutMillis: 10000,
@@ -29,7 +29,7 @@ export async function getSettings() {
   return (result.rows[0]?.value || defaults) as Settings;
 }
 export async function availability() {
-  const demo = !process.env.DATABASE_URL;
+  const demo = !process.env.SNP_DATABASE_URL;
   const settings = demo ? defaults : await getSettings();
   const dates = dispatchDates(settings);
   let taken: { dispatch_date: string; slot: string }[] = [];

@@ -24,7 +24,7 @@ export async function GET() {
       { error: "Please sign in." },
       { status: 401, headers: { "Cache-Control": "no-store" } },
     );
-  if (!process.env.DATABASE_URL)
+  if (!process.env.SNP_DATABASE_URL)
     return NextResponse.json(
       { error: "Connect the database to enable admin controls." },
       { status: 503 },
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       { error: "Invalid request origin." },
       { status: 403 },
     );
-  if (!process.env.DATABASE_URL)
+  if (!process.env.SNP_DATABASE_URL)
     return NextResponse.json(
       { error: "Connect the database to enable admin controls." },
       { status: 503 },

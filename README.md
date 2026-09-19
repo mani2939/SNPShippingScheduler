@@ -25,12 +25,12 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open `http://127.0.0.1:3000`, or `/admin` for the admin view. Leave DATABASE_URL empty to preview the account screens only. To enable bookings, supply a PostgreSQL connection and run `npm run db:setup`.
+Open `http://127.0.0.1:3000`, or `/admin` for the admin view. Leave SNP_DATABASE_URL empty to preview the account screens only. To enable bookings, supply a PostgreSQL connection and run `npm run db:setup`.
 
 ## Connect services and deploy
 
 1. Sign in to your Vercel account. Create a project for this folder (CLI or a Git repository import), framework **Next.js**.
-2. Add a PostgreSQL database, such as Neon from Vercel Marketplace. Copy its pooled connection string to **DATABASE_URL**, with TLS enabled. Add it locally to `.env.local` and run `npm run db:setup` once to apply `lib/schema.sql`. The setup is repeatable and does not erase bookings.
+2. Add a PostgreSQL database, such as Neon from Vercel Marketplace. Copy its pooled connection string to **SNP_DATABASE_URL**, with TLS enabled. Add it locally to `.env.local` and run `npm run db:setup` once to apply `lib/schema.sql`. The setup is repeatable and does not erase bookings.
 3. Run `node scripts/admin-secret.mjs` locally. Save the generated admin password in your password manager. Set **ADMIN_USERNAME** (for example `admin`), **ADMIN_PASSWORD_HASH** and **SESSION_SECRET** in Vercel environment variables; do not commit these values or send them in chat. The `/admin` session expires after eight hours.
 4. Set **APP_URL** to `https://snpdispatch.com` in Production. Use the exact preview origin for a separately configured Preview environment. Keep Preview and Production databases separate.
 5. Configure Resend and Twilio using the instructions below. Add their values from `.env.example` to Vercel's environment variables, then redeploy.
@@ -87,8 +87,8 @@ Tests cover allowed dates, UK daylight saving/date boundaries, booking validatio
 ### Deploy this account update
 
 1. Upload the complete updated source, including the `lib` folder and the new account pages. Keep `lib/` out of `.gitignore`.
-2. **Run `npm run db:setup` against your production database before deployment.** The repeatable schema creates customer, session and email-token tables and adds nullable `customer_id` to bookings without deleting existing records. Set `DATABASE_URL` locally using `.env.local`; never commit it.
-3. In Vercel Production, configure `DATABASE_URL`, `APP_URL=https://snpdispatch.com`, `RESEND_API_KEY`, `EMAIL_FROM` (using a Resend-verified domain), and the existing admin variables. APP_URL must be the public HTTPS address where customers can open email links. Do not use the localhost preview address for production emails.
+2. **Run `npm run db:setup` against your production database before deployment.** The repeatable schema creates customer, session and email-token tables and adds nullable `customer_id` to bookings without deleting existing records. Set `SNP_DATABASE_URL` locally using `.env.local`; never commit it.
+3. In Vercel Production, configure `SNP_DATABASE_URL`, `APP_URL=https://snpdispatch.com`, `RESEND_API_KEY`, `EMAIL_FROM` (using a Resend-verified domain), and the existing admin variables. APP_URL must be the public HTTPS address where customers can open email links. Do not use the localhost preview address for production emails.
 4. Redeploy. Register using an email you own, verify it, sign in and book. Then test forgot-password, confirm that the old password stops working and old sessions are signed out. These live email checks require your configured services; they have not been run against your production account here.
 
 The local account forms render without credentials, but submitting them requires the configured database and email service. There is no public booking or admin demo bypass.
