@@ -11,6 +11,7 @@ import {
   validateSettings,
   validateBooking,
   validDate,
+  nextAvailableSlot,
 } from "../lib/schedule.ts";
 const now = new Date("2026-09-17T10:00:00Z");
 test("schedule exposes only future Mon/Wed/Fri, with a bounded horizon", () => {
@@ -50,17 +51,19 @@ test("settings always preserve exactly three slots of capacity one", () => {
   assert.throws(() => validateSettings({ ...defaults, horizon: 1000 }));
   assert.throws(() => validateSettings({ ...defaults, timezone: "invalid" }));
 });
-test("booking validates customer and slot details server-side", () => {
+test("date-only booking validates customer details and ignores client slot selection", () => {
   const date = dispatchDates(defaults)[0];
   const input = {
     name: " Alex Test ",
     email: "ALEX@example.com",
     date,
-    slot: "slot-1",
     requestId: randomUUID(),
   };
   assert.equal(validateBooking(input, defaults).email, "alex@example.com");
-  assert.throws(() => validateBooking({ ...input, slot: "slot-4" }, defaults));
+  assert.equal(
+    "slot" in validateBooking({ ...input, slot: "slot-4" }, defaults),
+    false,
+  );
   assert.throws(() =>
     validateBooking({ ...input, email: "invalid" }, defaults),
   );
@@ -119,4 +122,24 @@ test("database enforces capacity, cancellation release, idempotency and weekdays
   } finally {
     await db.close();
   }
+});
+
+test("automatic assignment accounts for booked and closed places", () => {
+  assert.equal(nextAvailableSlot(defaults, []), "slot-1");
+  assert.equal(nextAvailableSlot(defaults, [{ slot: "slot-1" }]), "slot-2");
+  assert.equal(
+    nextAvailableSlot(defaults, [{ slot: "slot-1" }, { slot: "slot-2" }]),
+    "slot-3",
+  );
+  assert.equal(
+    nextAvailableSlot(
+      defaults,
+      defaults.slots.map((s) => ({ slot: s.id })),
+    ),
+    undefined,
+  );
+  assert.equal(
+    nextAvailableSlot(defaults, [{ slot: "slot-1" }, { slot: "slot-3" }]),
+    "slot-2",
+  );
 });

@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { pool, rateLimit, transaction } from "../../../lib/db";
-import { validateBooking, type Settings } from "../../../lib/schedule";
+import {
+  validateBooking,
+  nextAvailableSlot,
+  type Settings,
+} from "../../../lib/schedule";
 import { clientKey, sameOrigin, smallJSON } from "../../../lib/security";
 import { sendNotifications } from "../../../lib/notifications";
 export const maxDuration = 60;
@@ -42,23 +46,22 @@ export async function POST(request: NextRequest) {
         if (
           existing.name !== v.name ||
           existing.email !== v.email ||
-          existing.dispatch_date !== v.date ||
-          existing.slot !== v.slot
+          existing.dispatch_date !== v.date
         )
           throw Error(
             "This request has changed. Reload the page and try again.",
           );
         return existing;
       }
-      if (
-        (
-          await db.query(
-            "SELECT 1 FROM blocked_slots WHERE dispatch_date=$1 AND slot=$2",
-            [v.date, v.slot],
-          )
-        ).rowCount
-      )
-        throw Error("This slot is no longer available. Please choose another.");
+      const occupied = (
+        await db.query(
+          "SELECT slot FROM bookings WHERE dispatch_date=$1 AND status <> 'cancelled' UNION SELECT slot FROM blocked_slots WHERE dispatch_date=$1",
+          [v.date],
+        )
+      ).rows;
+      const assignedSlot = nextAvailableSlot(settings, occupied);
+      if (!assignedSlot)
+        throw Error("This day is fully booked. Please choose another date.");
       const id = randomUUID(),
         reference = "SNP-" + randomUUID().slice(0, 8).toUpperCase();
       const b = (
@@ -71,7 +74,7 @@ export async function POST(request: NextRequest) {
             v.name,
             v.email,
             v.date,
-            v.slot,
+            assignedSlot,
             settings.timezone,
           ],
         )
@@ -108,13 +111,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "That slot was just booked. Please refresh and choose another day or slot.",
+            "That day has just filled up. Please refresh and choose another date.",
         },
         { status: 409 },
       );
     const message = e instanceof Error ? e.message : "";
     const safe =
-      /^(Please enter|This slot|This request|Request is too large)/.test(
+      /^(Please enter|This day|This request|Request is too large)/.test(
         message,
       );
     return NextResponse.json(
@@ -123,7 +126,7 @@ export async function POST(request: NextRequest) {
           ? message
           : "We could not complete the request. Please try again.",
       },
-      { status: safe ? 400 : 503 },
+      { status: message.startsWith("This day") ? 409 : safe ? 400 : 503 },
     );
   }
 }

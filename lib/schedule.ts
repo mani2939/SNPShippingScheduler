@@ -82,19 +82,21 @@ export function validateBooking(value: unknown, settings: Settings) {
     !/^\S+@[^\s@]+\.[^\s@]+$/.test(v.email) ||
     typeof v.date !== "string" ||
     !eligible(v.date, settings) ||
-    typeof v.slot !== "string" ||
-    !settings.slots.some((s) => s.id === v.slot) ||
     typeof v.requestId !== "string" ||
     !/^[0-9a-f-]{36}$/i.test(v.requestId)
   )
-    throw new Error(
-      "Please enter a valid name, email, dispatch day and available slot.",
-    );
+    throw new Error("Please enter a valid name, email, dispatch day.");
   return {
     name: v.name.trim(),
     email: v.email.trim().toLowerCase(),
     date: v.date,
-    slot: v.slot,
     requestId: v.requestId,
   };
+}
+
+export function nextAvailableSlot(
+  settings: Settings,
+  occupied: { slot: string }[],
+) {
+  return settings.slots.find((s) => !occupied.some((o) => o.slot === s.id))?.id;
 }

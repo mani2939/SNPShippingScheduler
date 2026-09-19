@@ -48,7 +48,7 @@ export async function sendNotifications(bookingId: string) {
             from: process.env.EMAIL_FROM,
             to: [b.email],
             subject: `Your SNP dispatch is booked · ${b.reference}`,
-            text: `Hi ${b.name},\n\nYour dispatch is confirmed.\n\n${dateLabel(b.dispatch_date)}\n${label} (no fixed time)\nTimezone: ${b.timezone}\nReference: ${b.reference}\n\nThis is your shipment dispatch day, not its delivery date.\n\nSNP Dispatch`,
+            text: `Hi ${b.name},\n\nYour dispatch is confirmed.\n\n${dateLabel(b.dispatch_date)}\nTimezone: ${b.timezone}\nReference: ${b.reference}\n\nThis is your shipment dispatch day, not its delivery date.\n\nSNP Dispatch`,
           }),
           signal: AbortSignal.timeout(12000),
         });

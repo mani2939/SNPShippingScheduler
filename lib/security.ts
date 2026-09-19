@@ -1,30 +1,8 @@
-import {
-  createHmac,
-  randomBytes,
-  scryptSync,
-  timingSafeEqual,
-} from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
-export function adminConfigured() {
-  return (
-    !!process.env.ADMIN_PASSWORD_HASH &&
-    !!process.env.SESSION_SECRET &&
-    process.env.SESSION_SECRET.length >= 32
-  );
-}
-export function passwordMatches(password: string) {
-  try {
-    const [salt, hash] = process.env.ADMIN_PASSWORD_HASH!.split(":");
-    const expected = Buffer.from(hash, "hex");
-    const actual = scryptSync(password, salt, 64);
-    return (
-      expected.length === actual.length && timingSafeEqual(expected, actual)
-    );
-  } catch {
-    return false;
-  }
-}
+import { adminConfigured } from "./credentials";
+export { adminConfigured, credentialsMatch } from "./credentials";
 function sign(value: string) {
   return createHmac("sha256", process.env.SESSION_SECRET!)
     .update(value)
@@ -33,6 +11,7 @@ function sign(value: string) {
 export function newSession() {
   const payload = Buffer.from(
     JSON.stringify({
+      username: process.env.ADMIN_USERNAME,
       exp: Date.now() + 8 * 60 * 60 * 1000,
       nonce: randomBytes(16).toString("hex"),
     }),
@@ -49,8 +28,10 @@ export async function isAdmin() {
       actual = Buffer.from(sig, "hex");
     if (expected.length !== actual.length || !timingSafeEqual(expected, actual))
       return false;
+    const session = JSON.parse(Buffer.from(payload, "base64url").toString());
     return (
-      JSON.parse(Buffer.from(payload, "base64url").toString()).exp > Date.now()
+      session.username === process.env.ADMIN_USERNAME &&
+      session.exp > Date.now()
     );
   } catch {
     return false;

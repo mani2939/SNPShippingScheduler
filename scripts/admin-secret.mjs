@@ -2,6 +2,7 @@ import { randomBytes, scryptSync } from "node:crypto";
 const password = randomBytes(18).toString("base64url"),
   salt = randomBytes(16).toString("hex");
 console.log("Keep this password in your password manager. Do not commit it.");
+console.log("ADMIN_USERNAME=admin");
 console.log("Admin password: " + password);
 console.log(
   "ADMIN_PASSWORD_HASH=" +

@@ -1,9 +1,9 @@
 # SNP Dispatch
 
-Customer booking site and password-protected admin portal, prepared for Vercel and `snpdispatch.com`.
+Customer booking site and username-and-password-protected admin portal, prepared for Vercel and `snpdispatch.com`.
 
 - Mondays, Wednesdays and Fridays only.
-- Exactly three slots per day; one booking per slot. No appointment times.
+- Exactly three places per day. Customers select only a date and see the remaining count; the server assigns an internal slot automatically. No appointment times.
 - Customer name and email, on-page confirmation and a booking reference.
 - PostgreSQL transactions and a unique index prevent overbooking, including simultaneous requests.
 - Email confirmations through Resend; business WhatsApp alerts through Twilio.
@@ -11,7 +11,7 @@ Customer booking site and password-protected admin portal, prepared for Vercel a
 
 ## Current state
 
-The code builds and can run locally. It has **not been deployed**. No database, admin password, email sender or WhatsApp API credentials have been connected. Without a database it runs in a clearly labelled, read-only preview mode and cannot accept bookings. No real email or WhatsApp messages have been sent.
+The code builds and can run locally. It has **not been deployed**. No database, admin password, email sender or WhatsApp API credentials have been connected. Without a database the customer page runs in a clearly labelled, read-only preview mode and cannot accept bookings. The admin portal always requires authentication and never exposes a public preview. No real email or WhatsApp messages have been sent.
 
 Default operational choices: Europe/London timezone, 42-day booking window, no same-day bookings. Admin can change timezone and booking horizon. Cancellation releases the slot but does not email the customer; the confirmation prompt tells the administrator to contact them directly.
 
@@ -31,7 +31,7 @@ Open `http://127.0.0.1:3000`, or `/admin` for the admin view. Leave DATABASE_URL
 
 1. Sign in to your Vercel account. Create a project for this folder (CLI or a Git repository import), framework **Next.js**.
 2. Add a PostgreSQL database, such as Neon from Vercel Marketplace. Copy its pooled connection string to **DATABASE_URL**, with TLS enabled. Add it locally to `.env.local` and run `npm run db:setup` once to apply `lib/schema.sql`. The setup is repeatable and does not erase bookings.
-3. Run `node scripts/admin-secret.mjs` locally. Save the generated admin password in your password manager. Set **ADMIN_PASSWORD_HASH** and **SESSION_SECRET** in Vercel environment variables; do not commit these values or send them in chat. The `/admin` session expires after eight hours.
+3. Run `node scripts/admin-secret.mjs` locally. Save the generated admin password in your password manager. Set **ADMIN_USERNAME** (for example `admin`), **ADMIN_PASSWORD_HASH** and **SESSION_SECRET** in Vercel environment variables; do not commit these values or send them in chat. The `/admin` session expires after eight hours.
 4. Set **APP_URL** to `https://snpdispatch.com` in Production. Use the exact preview origin for a separately configured Preview environment. Keep Preview and Production databases separate.
 5. Configure Resend and Twilio using the instructions below. Add their values from `.env.example` to Vercel's environment variables, then redeploy.
 6. Deploy with `npx vercel --prod` from this folder, or use Vercel's Git integration. Sign in if prompted. The lockfile fixes tested dependency versions; Vercel detects the Next.js build automatically.
@@ -44,7 +44,7 @@ Official references: [Vercel deployments](https://vercel.com/docs/cli/deploy), [
 
 Verify a sending domain in Resend by adding its required DNS records. Create an API key and set **RESEND_API_KEY**. Set **EMAIL_FROM** to a sender on that verified domain, e.g. `SNP Dispatch <dispatch@snpdispatch.com>`.
 
-The email includes the customer name, dispatch date, slot, timezone and reference. Resend receives an idempotency key tied to the booking. “Sent” in admin means the provider accepted the email; it is not a guarantee of inbox delivery. Check the provider's dashboard for bounces/delivery results.
+The email includes the customer name, dispatch date, timezone and reference, without exposing internal slot numbers. Resend receives an idempotency key tied to the booking. “Sent” in admin means the provider accepted the email; it is not a guarantee of inbox delivery. Check the provider's dashboard for bounces/delivery results.
 
 Reference: [Resend Send Email API](https://resend.com/docs/api-reference/emails/send-email).
 
@@ -74,3 +74,11 @@ npm run build
 ```
 
 Tests cover allowed dates, UK daylight saving/date boundaries, booking validation, fixed capacity, PostgreSQL unique constraints, releasing cancelled slots, duplicate request IDs, and transaction rollback. Provider deliveries and custom-domain deployment require connected accounts and must be checked after configuration.
+
+## Updated customer and admin flow
+
+- `/` always opens the customer booking page, even if the administrator is signed in.
+- Customers choose a date and provide their name/email. Each date shows “Only X slots left”; there is no slot picker. Full dates are disabled.
+- Public availability responses expose daily counts, not internal slot IDs. Booking requests do not require a slot. Date-level transaction locks and the existing unique index protect the three-place limit. Existing databases/bookings remain compatible; no new schema migration is needed for this change.
+- `/admin` requires both `ADMIN_USERNAME` and the password corresponding to `ADMIN_PASSWORD_HASH`. Set `SESSION_SECRET` as before. Previous sessions without a username are invalidated. There is no default password.
+- The secret-generation script prints an example username and a random password/hash. Store the generated password securely. Enter configuration in Vercel's environment variables and redeploy; do not commit secrets.

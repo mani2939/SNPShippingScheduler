@@ -7,19 +7,18 @@ import {
   ArrowRight,
   ArrowLeft,
   CalendarDays,
-  Clock3,
   Check,
   ShieldCheck,
   Mail,
   LoaderCircle,
 } from "lucide-react";
 import { defaults, dateLabel, type Settings } from "../lib/schedule";
-type Day = { date: string; slots: { id: string; remaining: number }[] };
+type Day = { date: string; remaining: number };
 export default function BookingPage() {
-  const [settings, setSettings] = useState<Settings>(defaults),
+  const [settings, setSettings] =
+      useState<Pick<Settings, "timezone" | "horizon">>(defaults),
     [days, setDays] = useState<Day[]>([]),
     [date, setDate] = useState(""),
-    [slot, setSlot] = useState(""),
     [week, setWeek] = useState(0),
     [name, setName] = useState(""),
     [email, setEmail] = useState(""),
@@ -42,10 +41,7 @@ export default function BookingPage() {
       setDemo(d.demo);
       setDate(
         (prev) =>
-          prev ||
-          d.days.find((day: Day) => day.slots.some((s) => s.remaining > 0))
-            ?.date ||
-          "",
+          prev || d.days.find((day: Day) => day.remaining > 0)?.date || "",
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load availability.");
@@ -74,7 +70,7 @@ export default function BookingPage() {
         {
           name: "get_dispatch_availability",
           description:
-            "Read available dispatch days and slots. Does not make a booking.",
+            "Read dispatch dates and remaining daily capacity. Does not make a booking.",
           inputSchema: {
             type: "object",
             properties: {},
@@ -82,7 +78,13 @@ export default function BookingPage() {
           },
           annotations: { readOnlyHint: true },
           execute: async (input: unknown) => {
-            if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).length) throw new Error("This tool takes an empty object.");
+            if (
+              !input ||
+              typeof input !== "object" ||
+              Array.isArray(input) ||
+              Object.keys(input).length
+            )
+              throw new Error("This tool takes an empty object.");
             const r = await fetch("/api/availability", { cache: "no-store" });
             return r.json();
           },
@@ -92,10 +94,9 @@ export default function BookingPage() {
     ).catch(() => {});
     return () => lifecycle.abort();
   }, []);
-  const selected = settings.slots.find((s) => s.id === slot);
   const visible = days.slice(week * 3, week * 3 + 3);
   const day = days.find((d) => d.date === date);
-  const available = day?.slots.find((s) => s.id === slot)?.remaining || 0;
+  const available = day?.remaining || 0;
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -104,10 +105,10 @@ export default function BookingPage() {
       const r = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, date, slot, requestId }),
+        body: JSON.stringify({ name, email, date, requestId }),
       });
       const data = await r.json();
-      if (!r.ok) throw Error(data.error || "Unable to book this slot.");
+      if (!r.ok) throw Error(data.error || "Unable to book this date.");
       setReceipt(data);
       void load();
     } catch (e) {
@@ -137,7 +138,7 @@ export default function BookingPage() {
         <div className="page-intro">
           <div>
             <h1>Book your dispatch.</h1>
-            <p>Choose a day and one of three available slots.</p>
+            <p>Choose your dispatch date. We’ll reserve a place for you.</p>
           </div>
           <div className="dispatch-note">
             <CalendarDays size={19} />
@@ -163,7 +164,7 @@ export default function BookingPage() {
             <p>
               Your shipment is scheduled for <strong>{dateLabel(date)}</strong>
               <br />
-              {selected?.label} · {settings.timezone}.
+              {settings.timezone}.
             </p>
             <div className="reference">
               Booking reference <strong>{receipt.reference}</strong>
@@ -177,7 +178,6 @@ export default function BookingPage() {
               className="primary"
               onClick={() => {
                 setReceipt(null);
-                setSlot("");
                 setRequestId(crypto.randomUUID());
               }}
             >
@@ -226,7 +226,7 @@ export default function BookingPage() {
                 ) : (
                   visible.map((d) => {
                     const dt = new Date(d.date + "T12:00:00Z"),
-                      full = d.slots.every((s) => s.remaining === 0);
+                      full = d.remaining === 0;
                     return (
                       <button
                         type="button"
@@ -238,7 +238,6 @@ export default function BookingPage() {
                         }
                         onClick={() => {
                           setDate(d.date);
-                          setSlot("");
                           setRequestId(crypto.randomUUID());
                         }}
                       >
@@ -258,55 +257,26 @@ export default function BookingPage() {
                           })}
                         </span>
                         <span className="date-status">
-                          {full ? (
-                            "Fully booked"
-                          ) : date === d.date ? (
-                            <>
-                              <Check size={13} /> Selected
-                            </>
-                          ) : (
-                            "Available"
-                          )}
+                          {full
+                            ? "Fully booked"
+                            : `Only ${d.remaining} ${d.remaining === 1 ? "slot" : "slots"} left`}
                         </span>
                       </button>
                     );
                   })
                 )}
               </div>
-              <div className="slot-heading">
-                <h3>Pick a slot</h3>
-                <span>{settings.timezone.replace("_", " ")}</span>
-              </div>
-              <div className="slots">
-                {settings.slots.map((s, i) => {
-                  const remaining =
-                    day?.slots.find((x) => x.id === s.id)?.remaining || 0;
-                  return (
-                    <button
-                      type="button"
-                      disabled={busy || !remaining}
-                      aria-pressed={slot === s.id}
-                      className={"slot " + (slot === s.id ? "active" : "")}
-                      key={s.id}
-                      onClick={() => {
-                        setSlot(s.id);
-                        setRequestId(crypto.randomUUID());
-                      }}
-                    >
-                      <Package size={20} />
-                      <span className="slot-description">
-                        <strong>{s.label}</strong>
-                        <span>One shipment dispatch</span>
-                      </span>
-                      <span className="slot-availability">
-                        {remaining
-                          ? `${remaining} ${remaining === 1 ? "space" : "spaces"} left`
-                          : "Unavailable"}
-                      </span>
-                      <span className="radio">{slot === s.id && <span />}</span>
-                    </button>
-                  );
-                })}
+              <div className="booking-summary" aria-live="polite">
+                <strong>
+                  {date ? dateLabel(date) : "Select a dispatch date"}
+                </strong>
+                <span>
+                  {date
+                    ? available
+                      ? `Only ${available} ${available === 1 ? "slot" : "slots"} left`
+                      : "Fully booked — please choose another date"
+                    : "Three places per dispatch day"}
+                </span>
               </div>
               <div className="small-note">
                 <ShieldCheck size={17} />
@@ -364,7 +334,9 @@ export default function BookingPage() {
                       : "Choose a day"}
                   </strong>
                   <span>
-                    {selected ? selected.label : "Choose a slot to continue"}
+                    {date
+                      ? "One dispatch reservation"
+                      : "Choose a date to continue"}
                   </span>
                 </div>
                 {error && (
@@ -374,7 +346,7 @@ export default function BookingPage() {
                 )}
                 <button
                   className="primary"
-                  disabled={busy || !date || !slot || !available || demo}
+                  disabled={busy || !date || !available || demo}
                 >
                   {busy ? (
                     <LoaderCircle className="spin" size={18} />
@@ -391,11 +363,11 @@ export default function BookingPage() {
               <div className="dispatch-explainer">
                 <Package size={23} />
                 <div>
-                  <strong>A dispatch slot, made simple.</strong>
+                  <strong>Your dispatch, made simple.</strong>
                   <p>
                     Three places per dispatch day.
                     <br />
-                    Choose a slot. No time window needed.
+                    Choose a date. No time window needed.
                   </p>
                 </div>
               </div>

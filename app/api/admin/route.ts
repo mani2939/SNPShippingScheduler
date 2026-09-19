@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { pool, rateLimit, transaction, availability } from "../../../lib/db";
 import {
   adminConfigured,
-  passwordMatches,
+  credentialsMatch,
   newSession,
   isAdmin,
   sameOrigin,
@@ -19,17 +19,16 @@ import {
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 export async function GET() {
-  if (!process.env.DATABASE_URL)
-    return NextResponse.json({
-      demo: true,
-      settings: defaults,
-      bookings: [],
-      blocked: [],
-      connections: connections(),
-      schedule: (await availability()).days,
-    });
   if (!(await isAdmin()))
-    return NextResponse.json({ error: "Please sign in." }, { status: 401 });
+    return NextResponse.json(
+      { error: "Please sign in." },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
+    );
+  if (!process.env.DATABASE_URL)
+    return NextResponse.json(
+      { error: "Connect the database to enable admin controls." },
+      { status: 503 },
+    );
   try {
     await pool().query(
       "UPDATE notifications SET status='unknown',last_error='Sending was interrupted. Check the provider console.',updated_at=now() WHERE status='sending' AND updated_at<now()-interval '5 minutes'",
@@ -83,13 +82,9 @@ export async function POST(request: NextRequest) {
           { error: "Too many attempts. Please wait 15 minutes." },
           { status: 429 },
         );
-      if (
-        typeof input.password !== "string" ||
-        input.password.length > 256 ||
-        !passwordMatches(input.password)
-      )
+      if (!credentialsMatch(input.username, input.password))
         return NextResponse.json(
-          { error: "Incorrect password." },
+          { error: "Incorrect username or password." },
           { status: 401 },
         );
       const r = NextResponse.json({ ok: true });

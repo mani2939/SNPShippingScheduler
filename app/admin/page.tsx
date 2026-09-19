@@ -24,6 +24,7 @@ type Data = {
 export default function AdminPage() {
   const [data, setData] = useState<Data | null>(null),
     [login, setLogin] = useState(false),
+    [username, setUsername] = useState(""),
     [password, setPassword] = useState(""),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
@@ -118,13 +119,23 @@ export default function AdminPage() {
             className="panel login"
             onSubmit={(e) => {
               e.preventDefault();
-              void act({ action: "login", password }, "");
+              void act({ action: "login", username, password }, "");
             }}
           >
             <div className="eyebrow">ADMIN PORTAL</div>
             <h1>Welcome back.</h1>
             <p className="muted">Sign in to manage your dispatch schedule.</p>
-            <label htmlFor="password">Admin password</label>
+            <label htmlFor="username">Username</label>
+            <input
+              id="username"
+              name="username"
+              autoComplete="username"
+              required
+              maxLength={100}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+            <label htmlFor="password">Password</label>
             <input
               id="password"
               type="password"
