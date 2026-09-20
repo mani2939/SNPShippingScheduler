@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import CustomerHistory from "./customer-history";
 import {
   Package,
   ArrowRight,
@@ -153,6 +154,9 @@ export default function BookingPage({
           </span>
         </Link>
         <div className="action-row">
+          <a href="#booking-history" className="admin-link">
+            My bookings
+          </a>
           <Link href="/account?mode=forgot" className="admin-link">
             Reset password
           </Link>
@@ -362,6 +366,7 @@ export default function BookingPage({
             </aside>
           </form>
         )}
+        <CustomerHistory refreshKey={receipt?.reference || ""} />
         <footer>
           <span>© {new Date().getFullYear()} SNP Dispatch</span>
           <span>Monday · Wednesday · Friday</span>

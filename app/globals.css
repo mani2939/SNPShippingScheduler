@@ -969,3 +969,100 @@ td small {
     font-size: 21px;
   }
 }
+
+.customer-history {
+  margin-top: 32px;
+  padding: 28px;
+  scroll-margin-top: 24px;
+}
+.history-heading,
+.history-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.history-heading h2 {
+  margin: 8px 0 0;
+}
+.history-latest {
+  color: var(--muted);
+  line-height: 1.7;
+}
+.history-list {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0;
+}
+.history-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 0;
+  border-top: 1px solid var(--line, #e4e7e3);
+  flex-wrap: wrap;
+}
+.history-list li > div {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.history-list li > div > span {
+  font-size: 13px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.history-status {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.history-confirmed {
+  background: #edf4ff;
+  color: #25548a;
+}
+.history-dispatched {
+  background: #e5f2e9;
+  color: #21613b;
+}
+.history-cancelled {
+  background: #f5eded;
+  color: #874545;
+}
+.history-pagination {
+  margin-top: 20px;
+  font-size: 13px;
+}
+@media (max-width: 650px) {
+  .customer-history {
+    padding: 20px;
+  }
+  .header .action-row {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}
+
+.tracking-link {
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.tracking-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 210px;
+}
+.tracking-form label {
+  font-size: 13px;
+}
+.tracking-form input {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}

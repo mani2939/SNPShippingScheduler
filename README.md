@@ -106,3 +106,17 @@ Manual execution remains available with `npm run db:migrate` (`npm run db:setup`
 ### PostgreSQL SSL mode
 
 Use `sslmode=verify-full` in `SNP_DATABASE_URL` to explicitly verify the server certificate and hostname. Both the app and migration runner normalize the legacy `prefer`, `require`, and `verify-ca` URL modes to `verify-full`, preserving pg 8’s existing verification behavior and avoiding its SSL-mode warning. Other connection parameters remain unchanged.
+
+## Customer booking history
+
+Signed-in customers can select **My bookings** or scroll to **Your dispatch history** below the calendar. The view highlights their latest booking and lists dispatch dates, references, booking timestamps, timezone and confirmed/dispatched/cancelled status, newest bookings first, 20 per page. It refreshes after booking and includes a manual Refresh control for admin status changes. Capacity and slot IDs remain private.
+
+The history endpoint derives ownership from the verified customer session and returns only that account's records with private/no-store caching. Legacy bookings without a customer ID remain admin-only; they are not claimed by matching an unverified, historically entered email. Migration `0002_customer_history.sql` adds the history lookup index automatically during Vercel deployment.
+
+## Dispatch and Royal Mail tracking
+
+In admin bookings, enter the Royal Mail tracking number and select **Mark dispatched & save tracking**. The server requires a tracking reference and saves it with the dispatched status and timestamp in one atomic update. Cancelled bookings cannot be dispatched. For dispatched bookings, **Save tracking** corrects a reference or adds tracking to a legacy dispatched booking. The original dispatch timestamp is preserved when correcting tracking; adding tracking to a legacy record without a timestamp records the time of that update.
+
+Customers see their tracking number, dispatch timestamp and **Royal Mail Track Delivery** link beside the matching booking in My bookings. Refresh history to retrieve admin changes. This links to Royal Mail tracking; it does not fetch live carrier status or send an additional dispatch email. References are normalized to uppercase without spaces or hyphens and checked for 8–35 alphanumeric characters; this validates input, not carrier acceptance.
+
+Migration `0003_royal_mail_tracking.sql` adds nullable tracking and timestamp columns without changing existing bookings and runs automatically on Vercel. Link format follows [Royal Mail's linking guidance](https://www.royalmail.com/royal-mail-you/intellectual-property-rights/linking-our-website).

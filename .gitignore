@@ -215,3 +215,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Next.js application build output and local credentials
+node_modules/
+.next/
+.vercel/
+*.tsbuildinfo
+.env*

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { trackingURL } from "../../lib/tracking";
 import { useEffect, useState } from "react";
 import { Package, ArrowUpRight, LogOut, RefreshCw } from "lucide-react";
 import { dateLabel, today, type Settings } from "../../lib/schedule";
@@ -11,6 +12,7 @@ type Booking = {
   dispatch_date: string;
   slot: string;
   status: string;
+  royal_mail_tracking: string | null;
   notifications: Record<string, { status: string; error: string | null }>;
 };
 type Data = {
@@ -22,6 +24,7 @@ type Data = {
   connections: { email: boolean; whatsapp: boolean };
 };
 export default function AdminPage() {
+  const [tracking, setTracking] = useState<Record<string, string>>({});
   const [data, setData] = useState<Data | null>(null),
     [login, setLogin] = useState(false),
     [username, setUsername] = useState(""),
@@ -273,6 +276,18 @@ export default function AdminPage() {
                             <span className={"badge " + b.status}>
                               {b.status}
                             </span>
+                            {b.royal_mail_tracking && (
+                              <small>
+                                <a
+                                  className="tracking-link"
+                                  href={trackingURL(b.royal_mail_tracking)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  Royal Mail: {b.royal_mail_tracking}
+                                </a>
+                              </small>
+                            )}
                           </td>
                           <td>
                             {["email", "whatsapp"].map((c) => (
@@ -287,26 +302,63 @@ export default function AdminPage() {
                           </td>
                           <td>
                             <div className="admin-table-actions">
+                              {(b.status === "confirmed" ||
+                                b.status === "dispatched") && (
+                                <form
+                                  className="tracking-form"
+                                  onSubmit={(e) => {
+                                    e.preventDefault();
+                                    void act(
+                                      {
+                                        action:
+                                          b.status === "confirmed"
+                                            ? "status"
+                                            : "tracking",
+                                        id: b.id,
+                                        status: "dispatched",
+                                        tracking:
+                                          tracking[b.id] ??
+                                          b.royal_mail_tracking ??
+                                          "",
+                                      },
+                                      "Royal Mail tracking saved. Customers can view it in My bookings.",
+                                    );
+                                  }}
+                                >
+                                  <label htmlFor={`tracking-${b.id}`}>
+                                    Royal Mail tracking number
+                                  </label>
+                                  <input
+                                    id={`tracking-${b.id}`}
+                                    required
+                                    maxLength={100}
+                                    disabled={busy}
+                                    value={
+                                      tracking[b.id] ??
+                                      b.royal_mail_tracking ??
+                                      ""
+                                    }
+                                    onChange={(e) =>
+                                      setTracking((v) => ({
+                                        ...v,
+                                        [b.id]: e.target.value,
+                                      }))
+                                    }
+                                    placeholder="e.g. AB123456789GB"
+                                  />
+                                  <button
+                                    className="secondary"
+                                    disabled={busy || data.demo}
+                                  >
+                                    {b.status === "confirmed"
+                                      ? "Mark dispatched & save tracking"
+                                      : "Save tracking"}
+                                  </button>
+                                </form>
+                              )}
+
                               {b.status === "confirmed" && (
                                 <>
-                                  <button
-                                    disabled={busy || data.demo}
-                                    className="secondary"
-                                    onClick={() => {
-                                      if (
-                                        confirm(
-                                          "Mark this shipment as dispatched?",
-                                        )
-                                      )
-                                        void act({
-                                          action: "status",
-                                          id: b.id,
-                                          status: "dispatched",
-                                        });
-                                    }}
-                                  >
-                                    Dispatched
-                                  </button>
                                   <button
                                     disabled={busy || data.demo}
                                     className="secondary"

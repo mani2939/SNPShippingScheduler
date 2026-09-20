@@ -22,7 +22,10 @@ test("migration installs account schema, preserves existing bookings, and is rep
     await db.query(`INSERT INTO bookings(id,request_id,reference,name,email,dispatch_date,slot,timezone)
       VALUES('00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000002',
       'KEEP','Existing Customer','existing@example.com','2026-09-21','slot-1','Europe/London')`);
-    assert.equal(await migrate(client(db), migrations, quiet), 1);
+    assert.equal(
+      await migrate(client(db), migrations, quiet),
+      migrations.length,
+    );
     assert.equal(await migrate(client(db), migrations, quiet), 0);
     const { rows } = await db.query(
       "SELECT reference, customer_id FROM bookings",
@@ -33,7 +36,7 @@ test("migration installs account schema, preserves existing bookings, and is rep
     );
     assert.equal(
       (await db.query("SELECT * FROM snp_schema_migrations")).rows.length,
-      1,
+      migrations.length,
     );
     await assert.rejects(
       migrate(client(db), [{ ...migrations[0], checksum: "modified" }], quiet),
@@ -49,7 +52,7 @@ test("fresh installation and failed migrations roll back together", async () => 
   try {
     const migrations = await readMigrations();
     const bad = {
-      name: "0002_broken.sql",
+      name: "0004_broken.sql",
       checksum: "broken",
       sql: "CREATE TABLE should_rollback(id int); SELECT * FROM nonexistent_table;",
     };
@@ -72,7 +75,10 @@ test("fresh installation and failed migrations roll back together", async () => 
         .rows[0].name,
       null,
     );
-    assert.equal(await migrate(client(db), migrations, quiet), 1);
+    assert.equal(
+      await migrate(client(db), migrations, quiet),
+      migrations.length,
+    );
   } finally {
     await db.close();
   }

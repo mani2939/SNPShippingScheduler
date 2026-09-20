@@ -1,3 +1,4 @@
+import { saveDispatch } from "../../../lib/dispatch";
 import { NextRequest, NextResponse } from "next/server";
 import { pool, rateLimit, transaction, availability } from "../../../lib/db";
 import {
@@ -153,12 +154,18 @@ export async function POST(request: NextRequest) {
         typeof input.id !== "string"
       )
         throw Error("Invalid booking update.");
-      const changed = await pool().query(
-        "UPDATE bookings SET status=$2 WHERE id=$1 AND status='confirmed' RETURNING id",
-        [input.id, input.status],
-      );
-      if (!changed.rowCount)
-        throw Error("Only confirmed bookings can be updated.");
+      if (input.status === "dispatched") {
+        await saveDispatch(pool(), input.id, input.tracking);
+      } else {
+        const changed = await pool().query(
+          "UPDATE bookings SET status='cancelled' WHERE id=$1 AND status='confirmed' RETURNING id",
+          [input.id],
+        );
+        if (!changed.rowCount)
+          throw Error("Only confirmed bookings can be updated.");
+      }
+    } else if (input.action === "tracking") {
+      await saveDispatch(pool(), input.id, input.tracking, true);
     } else if (input.action === "retry") {
       if (typeof input.id !== "string") throw Error("Invalid booking.");
       await sendNotifications(input.id);
@@ -167,7 +174,7 @@ export async function POST(request: NextRequest) {
   } catch (e) {
     const message = e instanceof Error ? e.message : "";
     const safe =
-      /^(Choose |This slot|Only confirmed|Use |Enter |Invalid |Unknown action)/.test(
+      /^(Choose |This slot|Only confirmed|Only dispatched|Use |Enter |Invalid |Unknown action)/.test(
         message,
       );
     return NextResponse.json(
