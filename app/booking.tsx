@@ -15,6 +15,8 @@ import {
   History,
   KeyRound,
   LogOut,
+  Zap,
+  ChevronDown,
 } from "lucide-react";
 import { addDays, dateLabel, today, type Settings } from "../lib/schedule";
 type Day = { date: string; available: boolean };
@@ -29,6 +31,7 @@ export default function BookingPage({
   const [latestRejectedUrgent, setLatestRejectedUrgent] = useState<string | null>(null);
   const [pendingUrgent, setPendingUrgent] = useState<{ reference: string; preferred_date: string | null } | null>(null);
   const [urgentMode, setUrgentMode] = useState(false);
+  const [urgentError, setUrgentError] = useState("");
   const [urgentReason, setUrgentReason] = useState("");
   const [preferredDate, setPreferredDate] = useState("");
   const [settings, setSettings] = useState<
@@ -160,7 +163,7 @@ export default function BookingPage({
   }
   async function submitUrgent(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
+    setUrgentError("");
     setBusy(true);
     try {
       const r = await fetch("/api/urgent", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ requestId, reason: urgentReason, preferredDate }) });
@@ -170,7 +173,7 @@ export default function BookingPage({
       setPendingUrgent({ reference: data.reference, preferred_date: preferredDate || null });
       setUrgentMode(false);
       void load();
-    } catch (e) { setError(e instanceof Error ? e.message : "Please try again."); }
+    } catch (e) { setUrgentError(e instanceof Error ? e.message : "Please try again."); }
     finally { setBusy(false); }
   }
   return (
@@ -249,22 +252,34 @@ export default function BookingPage({
           </section>
         ) : activeBooking ? (
           <section className="panel active-booking" role="status"><h2>You have an active booking</h2><p>Booking <strong>{activeBooking}</strong> is in progress. You can book again once SNP Dispatch marks it Completed or Cancelled.</p><a className="tracking-link" href="#booking-history">View your booking and tracking</a><button className="secondary" onClick={() => void load()}>Refresh booking status</button></section>
-        ) : urgentMode ? (
-          <section className="panel urgent-panel">
-            <div className="eyebrow">URGENT DISPATCH</div>
-            <h2>Request an urgent dispatch</h2>
-            <p className="muted">Tell us why you need an earlier dispatch. An admin will review your request and email you with a decision and confirmed date.</p>
-            <form onSubmit={submitUrgent} className="urgent-form">
-              <label htmlFor="urgent-preferred">Preferred date (optional)</label>
-              <input id="urgent-preferred" type="date" min={today(settings.timezone)} max={addDays(today(settings.timezone), 90)} value={preferredDate} onChange={e => setPreferredDate(e.target.value)} disabled={busy} />
-              <label htmlFor="urgent-reason">Reason for urgent dispatch</label>
-              <textarea id="urgent-reason" required minLength={10} maxLength={500} rows={4} value={urgentReason} onChange={e => setUrgentReason(e.target.value)} disabled={busy} placeholder="Please explain when and why you need this dispatch." />
-              {error && <p role="alert" className="error">{error}</p>}
-              <div className="action-row"><button className="primary" disabled={busy}>{busy ? "Sending…" : "Send urgent request"}</button><button type="button" className="secondary" disabled={busy} onClick={() => { setUrgentMode(false); setError(""); }}>Back to dates</button></div>
-            </form>
-          </section>
         ) : (
-          <><form onSubmit={submit} className="booking-grid">
+          <>
+          <section className={"panel urgent-dispatch-card" + (urgentMode ? " is-expanded" : "")} aria-labelledby="urgent-dispatch-heading">
+            <div className="urgent-card-top">
+              <span className="urgent-card-icon" aria-hidden="true"><Zap size={22} /></span>
+              <div className="urgent-card-copy">
+                <span className="urgent-card-kicker">PRIORITY REQUEST</span>
+                <h2 id="urgent-dispatch-heading">Need an urgent dispatch?</h2>
+                <p>Ask us to review an earlier date. We’ll email you after an admin makes a decision.</p>
+              </div>
+              <button type="button" className="urgent-card-toggle" aria-expanded={urgentMode} aria-controls="urgent-request-form" disabled={busy} onClick={() => {
+                setUrgentMode(open => !open);
+                setUrgentError("");
+                if (!urgentMode) setRequestId(crypto.randomUUID());
+              }}>
+                {urgentMode ? "Close request" : "Request urgent dispatch"}<ChevronDown size={18} aria-hidden="true" />
+              </button>
+            </div>
+            <div className="urgent-card-body" id="urgent-request-form" hidden={!urgentMode}>
+              <form onSubmit={submitUrgent} className="urgent-form">
+                <div className="urgent-field"><label htmlFor="urgent-preferred">Preferred date <span>(optional)</span></label><input id="urgent-preferred" type="date" min={today(settings.timezone)} max={addDays(today(settings.timezone), 90)} value={preferredDate} onChange={e => setPreferredDate(e.target.value)} disabled={busy} /></div>
+                <div className="urgent-field"><label htmlFor="urgent-reason">Why do you need an urgent dispatch?</label><textarea id="urgent-reason" required minLength={10} maxLength={500} rows={4} value={urgentReason} onChange={e => setUrgentReason(e.target.value)} disabled={busy} placeholder="Tell us when and why you need this dispatch." /></div>
+                {urgentError && <p role="alert" className="error">{urgentError}</p>}
+                <div className="urgent-form-actions"><button className="primary" disabled={busy}>{busy ? "Sending…" : "Send urgent request"}<ArrowRight size={18} /></button></div>
+              </form>
+            </div>
+          </section>
+          <form onSubmit={submit} className="booking-grid">
             <section className="panel selection">
               <div className="section-title">
                 <span className="step">01</span>
@@ -414,7 +429,6 @@ export default function BookingPage({
               </div>
             </aside>
           </form>
-          <button className="secondary urgent-entry" onClick={() => { setUrgentMode(true); setError(""); setRequestId(crypto.randomUUID()); }}>Need an urgent dispatch? Request admin review</button>
           </>
         )}
         <CustomerHistory refreshKey={receipt?.reference || ""} />
