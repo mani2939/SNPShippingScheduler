@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import Brand from "../brand";
+import MailConfirmation from "./mail-confirmation";
 import { useEffect, useState } from "react";
 import {
   Package,
@@ -55,6 +57,9 @@ export default function AccountForm({
     if (initialToken)
       window.history.replaceState(null, "", `/account?mode=${mode}`);
   }, []);
+  useEffect(() => {
+    if (done) document.getElementById("mail-confirmation-heading")?.focus();
+  }, [done]);
   function change(next: Mode) {
     setMode(next);
     setError("");
@@ -101,7 +106,7 @@ export default function AccountForm({
       setMessage(data.message);
       setPassword("");
       setConfirmPassword("");
-      if (mode === "verify" || mode === "reset") setDone(true);
+      setDone(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Please try again.");
     } finally {
@@ -113,20 +118,16 @@ export default function AccountForm({
   return (
     <>
       <header className="header">
-        <Link href="/" className="brand">
-          <span className="brand-icon">
-            <Package size={23} />
-          </span>
-          <span>
-            SNP<span className="brand-light">dispatch</span>
-          </span>
-        </Link>
+        <Brand />
         <Link href="/admin" className="admin-link">
           Admin portal <ArrowUpRight size={16} />
         </Link>
       </header>
       <main className="account-main">
         <section className="panel account-card">
+          {done && (mode === "register" || mode === "forgot" || mode === "resend") ? (
+            <MailConfirmation mode={mode} />
+          ) : <>
           <div className="account-symbol">
             <LockKeyhole size={24} />
           </div>
@@ -291,6 +292,7 @@ export default function AccountForm({
               </div>
             )
           )}
+          </>}
         </section>
         <p className="account-footer">
           Shipment dispatch on Monday, Wednesday and Friday.

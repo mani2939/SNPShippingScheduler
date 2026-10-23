@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Brand from "../brand";
 import { bookingStatuses, activeBookingStatuses, type BookingStatus } from "../../lib/booking-status";
 import { trackingURL } from "../../lib/tracking";
 import { useEffect, useState } from "react";
@@ -105,14 +106,7 @@ export default function AdminPage() {
   return (
     <>
       <header className="header">
-        <Link href="/" className="brand">
-          <span className="brand-icon">
-            <Package size={23} />
-          </span>
-          <span>
-            SNP<span className="brand-light">dispatch</span>
-          </span>
-        </Link>
+        <Brand />
         <Link href="/" className="admin-link">
           Customer view <ArrowUpRight size={16} />
         </Link>

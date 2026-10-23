@@ -126,3 +126,9 @@ Customers see their status, Royal Mail reference and tracking link in My booking
 `0004_booking_workflow.sql` runs automatically during the Vercel build using **SNP_DATABASE_URL**. It converts Dispatched to Shipped, expands the allowed statuses, and installs the active-booking guard. Existing duplicate active requests are preserved for the admin to resolve: no new requests are permitted until all active requests for that customer are completed or cancelled. Legacy bookings without a customer ID remain admin-only and cannot be attributed to an account safely by email alone.
 
 Deploy the entire source folder, including `migrations/`, `scripts/`, `lib/`, and `vercel.json`. Database changes have not been run against production from this workspace.
+
+## Registration confirmation and brand theme
+
+Successful registration now replaces the entire form and tabs with a Check your inbox confirmation, sign-in link and option to request another email. Password reset and verification email requests use the same confirmation pattern. Errors leave the form available for correction. Account existence remains private and no delivery guarantee is displayed.
+
+The customer and admin portal use Shapes and Pieces styling: Playfair Display headings, Poppins body text, black buttons, warm white surfaces, and a pink/gold accent. Google Fonts are requested by the browser with system fallbacks, so the build does not depend on downloading fonts. This update requires no additional database migration.

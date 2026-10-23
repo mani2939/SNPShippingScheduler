@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Brand from "./brand";
 import CustomerHistory from "./customer-history";
 import {
   Package,
@@ -148,14 +149,7 @@ export default function BookingPage({
   return (
     <>
       <header className="header">
-        <Link href="/" className="brand">
-          <span className="brand-icon">
-            <Package size={23} />
-          </span>
-          <span>
-            SNP<span className="brand-light">dispatch</span>
-          </span>
-        </Link>
+        <Brand />
         <div className="action-row">
           <a href="#booking-history" className="admin-link">
             My bookings

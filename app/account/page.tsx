@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import AccountForm from "./account-form";
 export const metadata: Metadata = {
-  title: "Your account | SNP Dispatch",
+  title: "Your account | Shapes and Pieces",
   robots: { index: false, follow: false },
   referrer: "no-referrer",
 };
