@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from "next"; 
 import path from "node:path";
 const config: NextConfig = {
   poweredByHeader: false,
