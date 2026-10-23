@@ -12,6 +12,9 @@ import {
   ShieldCheck,
   Mail,
   LoaderCircle,
+  History,
+  KeyRound,
+  LogOut,
 } from "lucide-react";
 import { addDays, dateLabel, today, type Settings } from "../lib/schedule";
 type Day = { date: string; available: boolean };
@@ -172,24 +175,22 @@ export default function BookingPage({
   }
   return (
     <>
-      <header className="header">
+      <header className="header customer-header">
         <Brand />
-        <div className="action-row">
-          <a href="#booking-history" className="admin-link">
-            My bookings
+        <nav className="customer-header-nav" aria-label="Account actions">
+          <a href="#booking-history" className="customer-nav-link">
+            <History size={16} aria-hidden="true" /> My bookings
           </a>
-          <Link href="/privacy/erasure" className="admin-link">Data deletion</Link>
-          <Link href="/account?mode=forgot" className="admin-link">
-            Reset password
+          <Link href="/privacy/erasure" className="customer-nav-link">
+            <ShieldCheck size={16} aria-hidden="true" /> Data deletion
           </Link>
-          <button
-            className="secondary"
-            disabled={busy}
-            onClick={() => void logout()}
-          >
-            Sign out
+          <Link href="/account?mode=forgot" className="customer-nav-link">
+            <KeyRound size={16} aria-hidden="true" /> Reset password
+          </Link>
+          <button type="button" className="customer-nav-link customer-nav-signout" disabled={busy} onClick={() => void logout()}>
+            <LogOut size={16} aria-hidden="true" /> Sign out
           </button>
-        </div>
+        </nav>
       </header>
       <main className="booking-main">
         <div className="eyebrow">SHIPMENT SCHEDULING</div>

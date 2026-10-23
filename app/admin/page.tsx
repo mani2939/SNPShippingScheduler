@@ -4,8 +4,9 @@ import Brand from "../brand";
 import { bookingStatuses, activeBookingStatuses, type BookingStatus } from "../../lib/booking-status";
 import { trackingURL } from "../../lib/tracking";
 import { useEffect, useState } from "react";
-import { Package, ArrowUpRight, LogOut, RefreshCw } from "lucide-react";
+import { Package, ArrowUpRight, LogOut, RefreshCw, ClipboardList, Zap, Users, ShieldCheck, CalendarDays, Settings2, Bell } from "lucide-react";
 import { dateLabel, type Settings } from "../../lib/schedule";
+type BookingFilter = BookingStatus | "all" | "active" | "needs_attention";
 type Booking = {
   id: string;
   reference: string;
@@ -46,7 +47,7 @@ export default function AdminPage() {
     [message, setMessage] = useState(""),
     [tab, setTab] = useState("bookings"),
     [busy, setBusy] = useState(false),
-    [filter, setFilter] = useState<BookingStatus | "all">("confirmed"),
+    [filter, setFilter] = useState<BookingFilter>("active"),
     [settings, setSettings] = useState<Settings | null>(null);
   async function load() {
     try {
@@ -103,38 +104,58 @@ export default function AdminPage() {
     data?.bookings.filter(
       (b) => activeBookingStatuses.includes(b.status),
     ) || [];
-  const shown =
-    data?.bookings.filter((b) => filter === "all" || b.status === filter) || [];
-  const statusTabs: { key: BookingStatus | "all"; label: string }[] = [
+  const needsAttention = (booking: Booking) => booking.status !== "cancelled" &&
+    Object.values(booking.notifications).some((notice) => ["failed", "pending", "unknown", "sending"].includes(notice.status));
+  const shown = data?.bookings.filter((booking) => {
+    if (filter === "all") return true;
+    if (filter === "active") return activeBookingStatuses.includes(booking.status);
+    if (filter === "needs_attention") return needsAttention(booking);
+    return booking.status === filter;
+  }) || [];
+  const statusTabs: { key: BookingFilter; label: string }[] = [
+    { key: "active", label: "Active" },
     { key: "confirmed", label: "Confirmed" },
     { key: "being_packed", label: "Being Packed" },
     { key: "shipped", label: "Shipped" },
     { key: "completed", label: "Completed" },
     { key: "cancelled", label: "Cancelled" },
-    { key: "all", label: "All" },
+    { key: "needs_attention", label: "Needs attention" },
+    { key: "all", label: "All bookings" },
   ];
+  const filterCount = (key: BookingFilter) => key === "all" ? (data?.bookings.length || 0) :
+    key === "active" ? (data?.bookings.filter(b => activeBookingStatuses.includes(b.status)).length || 0) :
+    key === "needs_attention" ? (data?.bookings.filter(needsAttention).length || 0) :
+    (data?.bookings.filter(b => b.status === key).length || 0);
+  const pageTitles: Record<string, string> = {
+    bookings: "Dispatch overview", urgent: "Urgent requests", customers: "Customers",
+    gdpr: "GDPR requests", availability: "Availability", settings: "Settings",
+  };
+  const pageDescriptions: Record<string, string> = {
+    bookings: "Track and progress every dispatch from confirmation to completion.",
+    urgent: "Review urgent requests and assign a confirmed dispatch date.",
+    customers: "Manage your registered customer directory.",
+    gdpr: "Review and process customer data deletion requests.",
+    availability: "Manage the dispatch calendar and closed places.",
+    settings: "Configure dispatch dates and notification connections.",
+  };
+  const pageGroup = ["customers", "gdpr"].includes(tab) ? "PEOPLE & PRIVACY" : tab === "settings" ? "SYSTEM" : "OPERATIONS";
   const shownCustomers = data?.customers.filter((customer) => {
     const matchesSearch = `${customer.name} ${customer.email}`.toLowerCase().includes(customerSearch.trim().toLowerCase());
     const matchesFilter = customerFilter === "all" || customer.email_verified === (customerFilter === "verified");
     return matchesSearch && matchesFilter;
   }) || [];
-  const failed =
-    data?.bookings.filter(
-      (b) =>
-        b.status !== "cancelled" &&
-        Object.values(b.notifications).some((n) =>
-          ["failed", "pending", "unknown", "sending"].includes(n.status),
-        ),
-    ).length || 0;
+  const failed = data?.bookings.filter(needsAttention).length || 0;
+  const urgentCount = data?.urgentRequests.filter(r => r.status === "pending").length || 0;
+  const gdprCount = data?.gdprRequests.filter(r => r.status === "pending").length || 0;
   return (
     <>
-      <header className="header">
+      <header className="header admin-topbar">
         <Brand />
         <Link href="/" className="admin-link">
           Customer view <ArrowUpRight size={16} />
         </Link>
       </header>
-      <main className="admin-main">
+      <main className={data && !login ? "admin-main admin-dashboard" : "admin-main"}>
         {login ? (
           <form
             className="panel login"
@@ -176,98 +197,70 @@ export default function AdminPage() {
             </button>
           </form>
         ) : data ? (
-          <>
-            <div className="admin-intro">
-              <div>
-                <div className="eyebrow">OPERATIONS / ADMIN</div>
-                <h1>Dispatch overview</h1>
-                <p className="muted">
-                  Three slots. Monday, Wednesday and Friday.
-                </p>
+          <div className="admin-shell">
+            <aside className="admin-sidebar" aria-label="Dashboard navigation">
+              <div className="admin-sidebar-heading">SNP DISPATCH <span>WORKSPACE</span></div>
+              <nav className="admin-side-nav" aria-label="Admin sections">
+                <div className="admin-side-group">
+                  <span className="admin-side-label">OPERATIONS</span>
+                  <button type="button" aria-pressed={tab === "bookings"} onClick={() => setTab("bookings")}><ClipboardList size={18} /><span>Bookings</span><em>{data.bookings.length}</em></button>
+                  <button type="button" aria-pressed={tab === "urgent"} onClick={() => setTab("urgent")}><Zap size={18} /><span>Urgent requests</span>{urgentCount > 0 && <em className="admin-nav-alert">{urgentCount}</em>}</button>
+                  <button type="button" aria-pressed={tab === "availability"} onClick={() => setTab("availability")}><CalendarDays size={18} /><span>Availability</span></button>
+                </div>
+                <div className="admin-side-group">
+                  <span className="admin-side-label">PEOPLE & PRIVACY</span>
+                  <button type="button" aria-pressed={tab === "customers"} onClick={() => setTab("customers")}><Users size={18} /><span>Customers</span><em>{data.customers.length}</em></button>
+                  <button type="button" aria-pressed={tab === "gdpr"} onClick={() => setTab("gdpr")}><ShieldCheck size={18} /><span>GDPR requests</span>{gdprCount > 0 && <em className="admin-nav-alert">{gdprCount}</em>}</button>
+                </div>
+                <div className="admin-side-group">
+                  <span className="admin-side-label">SYSTEM</span>
+                  <button type="button" aria-pressed={tab === "settings"} onClick={() => setTab("settings")}><Settings2 size={18} /><span>Settings</span></button>
+                </div>
+              </nav>
+              <p className="admin-sidebar-foot">Monday · Wednesday · Friday<br />3 places per dispatch day</p>
+            </aside>
+            <div className="admin-workspace">
+              <div className="admin-intro">
+                <div>
+                  <div className="eyebrow">{pageGroup} / {tab.toUpperCase()}</div>
+                  <h1>{pageTitles[tab]}</h1>
+                  <p className="muted">{pageDescriptions[tab]}</p>
+                </div>
+                <div className="admin-intro-actions">
+                  <button type="button" className="secondary" onClick={() => void load()}><RefreshCw size={16} /> Refresh</button>
+                  {!data.demo && <button type="button" className="secondary" onClick={() => void act({ action: "logout" }, "")}><LogOut size={16} /> Sign out</button>}
+                </div>
               </div>
-              <div className="action-row">
-                <button
-                  className="secondary"
-                  onClick={() => void load()}
-                  aria-label="Refresh dispatches"
-                >
-                  <RefreshCw size={17} />
+              {data.demo && <div className="notice">Admin preview · Connect the database and configure admin sign-in to manage real bookings.</div>}
+              {error && <div role="alert" className="error">{error}</div>}
+              {message && <div role="status" className="status-message">{message}</div>}
+              {tab === "bookings" && <div className="admin-metrics">
+                <button type="button" className="admin-metric" onClick={() => setFilter("active")}>
+                  <span className="admin-metric-top"><span>Active bookings</span><Package size={19} /></span>
+                  <strong>{upcoming.length.toString().padStart(2, "0")}</strong>
+                  <small>Confirmed or in progress</small>
                 </button>
-                {!data.demo && (
-                  <button
-                    className="secondary"
-                    onClick={() => void act({ action: "logout" }, "")}
-                    aria-label="Sign out"
-                  >
-                    <LogOut size={17} />
-                  </button>
-                )}
-              </div>
-            </div>
-            {data.demo && (
-              <div className="notice">
-                Admin preview · Connect the database and configure admin sign-in
-                to manage real bookings.
-              </div>
-            )}
-            {error && (
-              <div role="alert" className="error">
-                {error}
-              </div>
-            )}
-            {message && (
-              <div role="status" className="status-message">
-                {message}
-              </div>
-            )}
-            <div className="stats">
-              <div className="panel stat">
-                <span>Active bookings</span>
-                <strong>{upcoming.length.toString().padStart(2, "0")}</strong>
-              </div>
-              <div className="panel stat">
-                <span>Places per dispatch day</span>
-                <strong>03</strong>
-              </div>
-              <div className="panel stat">
-                <span>Notifications to check</span>
-                <strong>{failed.toString().padStart(2, "0")}</strong>
-              </div>
-            </div>
-            <nav className="admin-tabs" aria-label="Admin sections">
-              {["bookings", "urgent", "customers", "gdpr", "availability", "settings"].map((t) => (
-                <button
-                  className="secondary"
-                  key={t}
-                  aria-pressed={tab === t}
-                  onClick={() => setTab(t)}
-                >
-                  {t === "urgent" ? `Urgent Requests (${data.urgentRequests.filter(u => u.status === "pending").length})` : t === "customers" ? `Customers (${data.customers.length})` : t === "gdpr" ? `GDPR Requests (${data.gdprRequests.filter(r => r.status === "pending").length})` : t[0].toUpperCase() + t.slice(1)}
+                <button type="button" className="admin-metric" onClick={() => setTab("urgent")}>
+                  <span className="admin-metric-top"><span>Urgent to review</span><Zap size={19} /></span>
+                  <strong>{urgentCount.toString().padStart(2, "0")}</strong>
+                  <small>Waiting for a decision</small>
                 </button>
-              ))}
-            </nav>
+                <button type="button" className="admin-metric" onClick={() => setFilter("needs_attention")}>
+                  <span className="admin-metric-top"><span>Notifications to check</span><Bell size={19} /></span>
+                  <strong>{failed.toString().padStart(2, "0")}</strong>
+                  <small>Email or WhatsApp delivery</small>
+                </button>
+              </div>}
             {tab === "bookings" && (
               <>
-                <nav className="booking-status-tabs" aria-label="Filter bookings by status">
-                  {statusTabs.map(({ key, label }) => (
-                    <button
-                      type="button"
-                      key={key}
-                      aria-current={filter === key ? "page" : undefined}
-                      onClick={() => setFilter(key)}
-                    >
-                      <span>{label}</span>
-                      <span className="status-tab-count">
-                        {key === "all" ? data.bookings.length : data.bookings.filter((b) => b.status === key).length}
-                      </span>
-                    </button>
-                  ))}
-                </nav>
-                <p className="notifications-note">
-                  “Sent” means the provider accepted the notification. For an
-                  unknown result, check the provider’s delivery log before
-                  resending. Up to 500 recent bookings are shown.
-                </p>
+                <div className="booking-toolbar">
+                  <div><h2>Booking workflow</h2><p>{shown.length} {shown.length === 1 ? "booking" : "bookings"} in this view</p></div>
+                  <label htmlFor="booking-status-filter">Status
+                    <select id="booking-status-filter" value={filter} onChange={e => setFilter(e.target.value as BookingFilter)}>
+                      {statusTabs.map(({ key, label }) => <option key={key} value={key}>{label} · {filterCount(key)}</option>)}
+                    </select>
+                  </label>
+                </div>
                 <section className="panel table-wrap">
                   <table>
                     <thead>
@@ -381,11 +374,12 @@ export default function AdminPage() {
                       ))}
                     </tbody>
                   </table>
+                  <details className="admin-delivery-help"><summary>Notification delivery help</summary><p>“Sent” means the provider accepted the notification. For an unknown result, check the provider’s delivery log before resending. Up to 500 recent bookings are shown.</p></details>
                   {shown.length === 0 && (
                     <div className="empty">
                       <Package size={32} style={{ marginBottom: 12 }} />
                       <p>
-                        No {filter === "all" ? "" : `${bookingStatuses[filter].toLowerCase()} `}bookings yet.
+                        {filter === "needs_attention" ? "No notifications need attention." : filter === "active" ? "No active bookings yet." : filter === "all" ? "No bookings yet." : `No ${bookingStatuses[filter].toLowerCase()} bookings yet.`}
                       </p>
                       <p className="muted">
                         Customer bookings will appear here.
@@ -587,7 +581,8 @@ export default function AdminPage() {
                 </p>
               </form>
             )}
-          </>
+            </div>
+          </div>
         ) : (
           <>
             <p>Loading dispatch admin…</p>
