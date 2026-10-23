@@ -52,7 +52,7 @@ test("fresh installation and failed migrations roll back together", async () => 
   try {
     const migrations = await readMigrations();
     const bad = {
-      name: "0004_broken.sql",
+      name: "0005_broken.sql",
       checksum: "broken",
       sql: "CREATE TABLE should_rollback(id int); SELECT * FROM nonexistent_table;",
     };

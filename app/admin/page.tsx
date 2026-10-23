@@ -1,9 +1,10 @@
 "use client";
 import Link from "next/link";
+import { bookingStatuses, activeBookingStatuses, type BookingStatus } from "../../lib/booking-status";
 import { trackingURL } from "../../lib/tracking";
 import { useEffect, useState } from "react";
 import { Package, ArrowUpRight, LogOut, RefreshCw } from "lucide-react";
-import { dateLabel, today, type Settings } from "../../lib/schedule";
+import { dateLabel, type Settings } from "../../lib/schedule";
 type Booking = {
   id: string;
   reference: string;
@@ -11,7 +12,7 @@ type Booking = {
   email: string;
   dispatch_date: string;
   slot: string;
-  status: string;
+  status: BookingStatus;
   royal_mail_tracking: string | null;
   notifications: Record<string, { status: string; error: string | null }>;
 };
@@ -24,6 +25,7 @@ type Data = {
   connections: { email: boolean; whatsapp: boolean };
 };
 export default function AdminPage() {
+  const [statusDraft, setStatusDraft] = useState<Record<string, BookingStatus>>({});
   const [tracking, setTracking] = useState<Record<string, string>>({});
   const [data, setData] = useState<Data | null>(null),
     [login, setLogin] = useState(false),
@@ -82,16 +84,15 @@ export default function AdminPage() {
       setBusy(false);
     }
   }
-  const current = data ? today(data.settings.timezone) : "";
   const upcoming =
     data?.bookings.filter(
-      (b) => b.dispatch_date >= current && b.status === "confirmed",
+      (b) => activeBookingStatuses.includes(b.status),
     ) || [];
   const shown =
     data?.bookings.filter(
       (b) =>
         filter === "all" ||
-        (b.dispatch_date >= current && b.status === "confirmed"),
+        (activeBookingStatuses.includes(b.status)),
     ) || [];
   const failed =
     data?.bookings.filter(
@@ -204,7 +205,7 @@ export default function AdminPage() {
             )}
             <div className="stats">
               <div className="panel stat">
-                <span>Upcoming dispatches</span>
+                <span>Active bookings</span>
                 <strong>{upcoming.length.toString().padStart(2, "0")}</strong>
               </div>
               <div className="panel stat">
@@ -240,7 +241,7 @@ export default function AdminPage() {
                     onChange={(e) => setFilter(e.target.value)}
                     style={{ maxWidth: 220 }}
                   >
-                    <option value="upcoming">Upcoming dispatches</option>
+                    <option value="upcoming">Active bookings</option>
                     <option value="all">All recent bookings</option>
                   </select>
                 </div>
@@ -274,7 +275,7 @@ export default function AdminPage() {
                           </td>
                           <td>
                             <span className={"badge " + b.status}>
-                              {b.status}
+                              {bookingStatuses[b.status]}
                             </span>
                             {b.royal_mail_tracking && (
                               <small>
@@ -302,82 +303,30 @@ export default function AdminPage() {
                           </td>
                           <td>
                             <div className="admin-table-actions">
-                              {(b.status === "confirmed" ||
-                                b.status === "dispatched") && (
-                                <form
-                                  className="tracking-form"
-                                  onSubmit={(e) => {
-                                    e.preventDefault();
-                                    void act(
-                                      {
-                                        action:
-                                          b.status === "confirmed"
-                                            ? "status"
-                                            : "tracking",
-                                        id: b.id,
-                                        status: "dispatched",
-                                        tracking:
-                                          tracking[b.id] ??
-                                          b.royal_mail_tracking ??
-                                          "",
-                                      },
-                                      "Royal Mail tracking saved. Customers can view it in My bookings.",
-                                    );
-                                  }}
-                                >
-                                  <label htmlFor={`tracking-${b.id}`}>
-                                    Royal Mail tracking number
-                                  </label>
-                                  <input
-                                    id={`tracking-${b.id}`}
-                                    required
-                                    maxLength={100}
-                                    disabled={busy}
-                                    value={
-                                      tracking[b.id] ??
-                                      b.royal_mail_tracking ??
-                                      ""
-                                    }
-                                    onChange={(e) =>
-                                      setTracking((v) => ({
-                                        ...v,
-                                        [b.id]: e.target.value,
-                                      }))
-                                    }
-                                    placeholder="e.g. AB123456789GB"
-                                  />
-                                  <button
-                                    className="secondary"
-                                    disabled={busy || data.demo}
-                                  >
-                                    {b.status === "confirmed"
-                                      ? "Mark dispatched & save tracking"
-                                      : "Save tracking"}
-                                  </button>
+                              {b.status !== "cancelled" && (
+                                <form className="tracking-form" onSubmit={e => {
+                                  e.preventDefault();
+                                  void act({ action: "tracking", id: b.id, tracking: tracking[b.id] ?? b.royal_mail_tracking ?? "" }, "Royal Mail tracking saved.");
+                                }}>
+                                  <label htmlFor={`tracking-${b.id}`}>Royal Mail tracking number</label>
+                                  <input id={`tracking-${b.id}`} required maxLength={100} disabled={busy} value={tracking[b.id] ?? b.royal_mail_tracking ?? ""} onChange={e => setTracking(v => ({ ...v, [b.id]: e.target.value }))} placeholder="e.g. AB123456789GB" />
+                                  <button className="secondary" disabled={busy}>Save tracking</button>
                                 </form>
                               )}
-
-                              {b.status === "confirmed" && (
-                                <>
-                                  <button
-                                    disabled={busy || data.demo}
-                                    className="secondary"
-                                    onClick={() => {
-                                      if (
-                                        confirm(
-                                          "Cancel this booking and release its slot? Tell the customer directly; this does not send a cancellation email.",
-                                        )
-                                      )
-                                        void act({
-                                          action: "status",
-                                          id: b.id,
-                                          status: "cancelled",
-                                        });
-                                    }}
-                                  >
-                                    Cancel
-                                  </button>
-                                </>
+                              {activeBookingStatuses.includes(b.status) && (
+                                <form className="tracking-form" onSubmit={e => {
+                                  e.preventDefault();
+                                  const status = statusDraft[b.id] ?? b.status;
+                                  if (status === "cancelled" && !confirm("Cancel this booking and release its slot? Tell the customer directly; no cancellation email is sent.")) return;
+                                  const number = tracking[b.id] ?? b.royal_mail_tracking;
+                                  void act({ action: "status", id: b.id, status, ...(status === "shipped" && number ? { tracking: number } : {}) }, "Booking status updated.");
+                                }}>
+                                  <label htmlFor={`status-${b.id}`}>Booking status</label>
+                                  <select id={`status-${b.id}`} value={statusDraft[b.id] ?? b.status} disabled={busy} onChange={e => setStatusDraft(v => ({ ...v, [b.id]: e.target.value as BookingStatus }))}>
+                                    {Object.entries(bookingStatuses).filter(([status]) => b.status === "shipped" ? ["shipped","completed","cancelled"].includes(status) : status !== "completed").map(([status,label]) => <option key={status} value={status}>{label}</option>)}
+                                  </select>
+                                  <button className="secondary" disabled={busy}>Update status</button>
+                                </form>
                               )}
                               {b.status !== "cancelled" &&
                                 Object.values(b.notifications).some((n) =>
@@ -406,7 +355,7 @@ export default function AdminPage() {
                     <div className="empty">
                       <Package size={32} style={{ marginBottom: 12 }} />
                       <p>
-                        No {filter === "upcoming" ? "upcoming " : ""}dispatches
+                        No {filter === "upcoming" ? "active " : ""}dispatches
                         yet.
                       </p>
                       <p className="muted">

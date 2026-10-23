@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { bookingStatuses } from "../lib/booking-status";
 import { trackingURL } from "../lib/tracking";
 import { dateLabel } from "../lib/schedule";
 import type { CustomerBooking } from "../lib/customer-history";
@@ -124,7 +125,7 @@ export default function CustomerHistory({
                   )}
                   {booking.dispatched_at && (
                     <span>
-                      Dispatched{" "}
+                      Shipped{" "}
                       {new Intl.DateTimeFormat("en-GB", {
                         dateStyle: "medium",
                         timeStyle: "short",
@@ -134,13 +135,7 @@ export default function CustomerHistory({
                   )}
                 </div>
                 <span className={`history-status history-${booking.status}`}>
-                  {
-                    {
-                      confirmed: "Confirmed",
-                      dispatched: "Dispatched",
-                      cancelled: "Cancelled",
-                    }[booking.status]
-                  }
+                  {bookingStatuses[booking.status]}
                 </span>
               </li>
             ))}

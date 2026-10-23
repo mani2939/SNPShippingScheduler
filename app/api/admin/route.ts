@@ -1,4 +1,4 @@
-import { saveDispatch } from "../../../lib/dispatch";
+import { updateBookingStatus, saveTracking } from "../../../lib/dispatch";
 import { NextRequest, NextResponse } from "next/server";
 import { pool, rateLimit, transaction, availability } from "../../../lib/db";
 import {
@@ -149,23 +149,9 @@ export async function POST(request: NextRequest) {
           );
       });
     } else if (input.action === "status") {
-      if (
-        !["cancelled", "dispatched"].includes(input.status) ||
-        typeof input.id !== "string"
-      )
-        throw Error("Invalid booking update.");
-      if (input.status === "dispatched") {
-        await saveDispatch(pool(), input.id, input.tracking);
-      } else {
-        const changed = await pool().query(
-          "UPDATE bookings SET status='cancelled' WHERE id=$1 AND status='confirmed' RETURNING id",
-          [input.id],
-        );
-        if (!changed.rowCount)
-          throw Error("Only confirmed bookings can be updated.");
-      }
+      await updateBookingStatus(pool(), input.id, input.status, input.tracking);
     } else if (input.action === "tracking") {
-      await saveDispatch(pool(), input.id, input.tracking, true);
+      await saveTracking(pool(), input.id, input.tracking);
     } else if (input.action === "retry") {
       if (typeof input.id !== "string") throw Error("Invalid booking.");
       await sendNotifications(input.id);

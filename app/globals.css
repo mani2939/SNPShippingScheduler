@@ -1066,3 +1066,9 @@ td small {
   border: 1px solid var(--line);
   border-radius: 6px;
 }
+
+.active-booking { padding: 28px; display: grid; gap: 16px; }
+.active-booking .secondary { justify-self: start; }
+.history-being_packed, .badge.being_packed { background: #fff2d9; color: #745116; }
+.history-shipped, .badge.shipped { background: #edf4ff; color: #25548a; }
+.history-completed, .badge.completed { background: #e5f2e9; color: #21613b; }

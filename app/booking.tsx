@@ -20,6 +20,7 @@ export default function BookingPage({
   customer: { name: string; email: string };
 }) {
   const { name, email } = customer;
+  const [activeBooking, setActiveBooking] = useState<string | null>(null);
   const [settings, setSettings] = useState<
       Pick<Settings, "timezone" | "horizon">
     >({ timezone: "Europe/London", horizon: 42 }),
@@ -43,6 +44,7 @@ export default function BookingPage({
       }
       const d = await r.json();
       if (!r.ok) throw Error(d.error);
+      setActiveBooking(d.activeBooking);
       setSettings(d.settings);
       setDays(d.days);
       setDate(
@@ -134,6 +136,7 @@ export default function BookingPage({
       const data = await r.json();
       if (!r.ok) throw Error(data.error || "Unable to book this date.");
       setReceipt(data);
+      setActiveBooking(data.reference);
       void load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Please try again.");
@@ -211,9 +214,11 @@ export default function BookingPage({
                 setRequestId(crypto.randomUUID());
               }}
             >
-              Book another dispatch <ArrowRight size={18} />
+              View booking status <ArrowRight size={18} />
             </button>
           </section>
+        ) : activeBooking ? (
+          <section className="panel active-booking" role="status"><h2>You have an active booking</h2><p>Booking <strong>{activeBooking}</strong> is in progress. You can book again once SNP Dispatch marks it Completed or Cancelled.</p><a className="tracking-link" href="#booking-history">View your booking and tracking</a><button className="secondary" onClick={() => void load()}>Refresh booking status</button></section>
         ) : (
           <form onSubmit={submit} className="booking-grid">
             <section className="panel selection">

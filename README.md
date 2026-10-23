@@ -113,10 +113,16 @@ Signed-in customers can select **My bookings** or scroll to **Your dispatch hist
 
 The history endpoint derives ownership from the verified customer session and returns only that account's records with private/no-store caching. Legacy bookings without a customer ID remain admin-only; they are not claimed by matching an unverified, historically entered email. Migration `0002_customer_history.sql` adds the history lookup index automatically during Vercel deployment.
 
-## Dispatch and Royal Mail tracking
+## Booking workflow and Royal Mail tracking
 
-In admin bookings, enter the Royal Mail tracking number and select **Mark dispatched & save tracking**. The server requires a tracking reference and saves it with the dispatched status and timestamp in one atomic update. Cancelled bookings cannot be dispatched. For dispatched bookings, **Save tracking** corrects a reference or adds tracking to a legacy dispatched booking. The original dispatch timestamp is preserved when correcting tracking; adding tracking to a legacy record without a timestamp records the time of that update.
+Customers can have one active booking at a time. **Confirmed**, **Being Packed**, and **Shipped** are active; **Completed** and **Cancelled** permit a new booking. New requests default to Confirmed. The customer page displays the existing request instead of the booking form while it is active. The booking API locks the customer row inside its transaction before checking for an active request, preserving retries of the same request ID. A database trigger also guards against new duplicate active requests.
 
-Customers see their tracking number, dispatch timestamp and **Royal Mail Track Delivery** link beside the matching booking in My bookings. Refresh history to retrieve admin changes. This links to Royal Mail tracking; it does not fetch live carrier status or send an additional dispatch email. References are normalized to uppercase without spaces or hyphens and checked for 8–35 alphanumeric characters; this validates input, not carrier acceptance.
+Admin can save tracking separately without changing status, mark a request Being Packed, mark it Shipped with Royal Mail tracking, then mark it Completed. Admin can cancel an active request. Completed and Cancelled requests cannot be reopened through the admin API. A Shipped request cannot be moved back to packing. Tracking can be corrected on any non-cancelled request, including completed ones. The Active bookings filter includes overdue requests and shipped requests awaiting completion.
 
-Migration `0003_royal_mail_tracking.sql` adds nullable tracking and timestamp columns without changing existing bookings and runs automatically on Vercel. Link format follows [Royal Mail's linking guidance](https://www.royalmail.com/royal-mail-you/intellectual-property-rights/linking-our-website).
+Customers see their status, Royal Mail reference and tracking link in My bookings. Refresh history for updated status. These are admin-managed fulfilment statuses; live carrier status is not fetched, and status changes do not send an additional email. Shipping records the dispatch timestamp; tracking corrections preserve it.
+
+### Database migration
+
+`0004_booking_workflow.sql` runs automatically during the Vercel build using **SNP_DATABASE_URL**. It converts Dispatched to Shipped, expands the allowed statuses, and installs the active-booking guard. Existing duplicate active requests are preserved for the admin to resolve: no new requests are permitted until all active requests for that customer are completed or cancelled. Legacy bookings without a customer ID remain admin-only and cannot be attributed to an account safely by email alone.
+
+Deploy the entire source folder, including `migrations/`, `scripts/`, `lib/`, and `vercel.json`. Database changes have not been run against production from this workspace.

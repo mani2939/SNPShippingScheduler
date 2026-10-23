@@ -2,7 +2,7 @@ import type { CustomerDB } from "./customer-store.ts";
 export type CustomerBooking = {
   reference: string;
   dispatch_date: string;
-  status: "confirmed" | "dispatched" | "cancelled";
+  status: import("./booking-status").BookingStatus;
   created_at: string;
   timezone: string;
   royal_mail_tracking: string | null;

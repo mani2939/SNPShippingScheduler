@@ -1,3 +1,4 @@
+import { activeBookingMessage } from "../../../lib/booking-status";
 import { getCustomer } from "../../../lib/customer-auth";
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
@@ -42,6 +43,8 @@ export async function POST(request: NextRequest) {
         { ...input, name: customer.name, email: customer.email },
         settings,
       );
+      // Serialize booking attempts across all dates for this account.
+      await db.query("SELECT id FROM customers WHERE id=$1 FOR UPDATE", [customer.id]);
       await db.query("SELECT pg_advisory_xact_lock(hashtext($1))", [v.date]);
       const existing = (
         await db.query("SELECT * FROM bookings WHERE request_id=$1", [
@@ -64,6 +67,8 @@ export async function POST(request: NextRequest) {
           );
         return existing;
       }
+      const active = await db.query("SELECT id FROM bookings WHERE customer_id=$1 AND status IN ('confirmed','being_packed','shipped') LIMIT 1", [customer.id]);
+      if (active.rowCount) throw Error(activeBookingMessage);
       const occupied = (
         await db.query(
           "SELECT slot FROM bookings WHERE dispatch_date=$1 AND status <> 'cancelled' UNION SELECT slot FROM blocked_slots WHERE dispatch_date=$1",
@@ -119,6 +124,8 @@ export async function POST(request: NextRequest) {
     );
   } catch (e) {
     const code = (e as { code?: string }).code;
+    if ((e as { constraint?: string }).constraint === "one_active_booking_per_customer" || (e instanceof Error && e.message === activeBookingMessage))
+      return NextResponse.json({ error: activeBookingMessage }, { status: 409 });
     if (code === "23505")
       return NextResponse.json(
         {
