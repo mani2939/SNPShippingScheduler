@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import CookieConsent from "./cookie-consent";
 export const metadata: Metadata = {
   title: "Shapes and Pieces | Dispatch",
   description:
@@ -13,7 +14,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>{children}<CookieConsent /></body>
     </html>
   );
 }

@@ -13,7 +13,7 @@ import {
   Mail,
   LoaderCircle,
 } from "lucide-react";
-import { dateLabel, type Settings } from "../lib/schedule";
+import { addDays, dateLabel, today, type Settings } from "../lib/schedule";
 type Day = { date: string; available: boolean };
 export default function BookingPage({
   customer,
@@ -22,6 +22,12 @@ export default function BookingPage({
 }) {
   const { name, email } = customer;
   const [activeBooking, setActiveBooking] = useState<string | null>(null);
+  const [deletionRequested, setDeletionRequested] = useState(false);
+  const [latestRejectedUrgent, setLatestRejectedUrgent] = useState<string | null>(null);
+  const [pendingUrgent, setPendingUrgent] = useState<{ reference: string; preferred_date: string | null } | null>(null);
+  const [urgentMode, setUrgentMode] = useState(false);
+  const [urgentReason, setUrgentReason] = useState("");
+  const [preferredDate, setPreferredDate] = useState("");
   const [settings, setSettings] = useState<
       Pick<Settings, "timezone" | "horizon">
     >({ timezone: "Europe/London", horizon: 42 }),
@@ -46,6 +52,9 @@ export default function BookingPage({
       const d = await r.json();
       if (!r.ok) throw Error(d.error);
       setActiveBooking(d.activeBooking);
+      setDeletionRequested(d.deletionRequested);
+      setPendingUrgent(d.pendingUrgent);
+      setLatestRejectedUrgent(d.latestRejectedUrgent);
       setSettings(d.settings);
       setDays(d.days);
       setDate(
@@ -146,6 +155,21 @@ export default function BookingPage({
       setBusy(false);
     }
   }
+  async function submitUrgent(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      const r = await fetch("/api/urgent", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ requestId, reason: urgentReason, preferredDate }) });
+      if (r.status === 401) { window.location.assign("/account"); return; }
+      const data = await r.json();
+      if (!r.ok) throw Error(data.error || "Could not submit urgent request.");
+      setPendingUrgent({ reference: data.reference, preferred_date: preferredDate || null });
+      setUrgentMode(false);
+      void load();
+    } catch (e) { setError(e instanceof Error ? e.message : "Please try again."); }
+    finally { setBusy(false); }
+  }
   return (
     <>
       <header className="header">
@@ -154,6 +178,7 @@ export default function BookingPage({
           <a href="#booking-history" className="admin-link">
             My bookings
           </a>
+          <Link href="/privacy/erasure" className="admin-link">Data deletion</Link>
           <Link href="/account?mode=forgot" className="admin-link">
             Reset password
           </Link>
@@ -181,7 +206,10 @@ export default function BookingPage({
             </div>
           </div>
         </div>
-        {receipt ? (
+        {latestRejectedUrgent && !pendingUrgent && !activeBooking && !receipt && <div className="notice" role="status">Urgent request {latestRejectedUrgent} was declined. You can choose a standard dispatch date below or submit another urgent request.</div>}
+        {deletionRequested ? (
+          <section className="panel active-booking" role="status"><h2>Data deletion request under review</h2><p>Your request has been sent to SNP Dispatch. New dispatch bookings are paused while an admin reviews it.</p><Link className="tracking-link" href="/privacy/erasure">View request information</Link></section>
+        ) : receipt ? (
           <section className="success panel" aria-live="polite">
             <span className="success-icon">
               <Check size={34} />
@@ -211,10 +239,31 @@ export default function BookingPage({
               View booking status <ArrowRight size={18} />
             </button>
           </section>
+        ) : pendingUrgent ? (
+          <section className="panel active-booking" role="status">
+            <h2>Urgent request received</h2>
+            <p>Request <strong>{pendingUrgent.reference}</strong> is awaiting admin review. We’ll email you when it is approved with a dispatch date, or if it is declined.</p>
+            {pendingUrgent.preferred_date && <p>Requested date: {dateLabel(pendingUrgent.preferred_date)}</p>}
+            <button className="secondary" onClick={() => void load()}>Refresh request status</button>
+          </section>
         ) : activeBooking ? (
           <section className="panel active-booking" role="status"><h2>You have an active booking</h2><p>Booking <strong>{activeBooking}</strong> is in progress. You can book again once SNP Dispatch marks it Completed or Cancelled.</p><a className="tracking-link" href="#booking-history">View your booking and tracking</a><button className="secondary" onClick={() => void load()}>Refresh booking status</button></section>
+        ) : urgentMode ? (
+          <section className="panel urgent-panel">
+            <div className="eyebrow">URGENT DISPATCH</div>
+            <h2>Request an urgent dispatch</h2>
+            <p className="muted">Tell us why you need an earlier dispatch. An admin will review your request and email you with a decision and confirmed date.</p>
+            <form onSubmit={submitUrgent} className="urgent-form">
+              <label htmlFor="urgent-preferred">Preferred date (optional)</label>
+              <input id="urgent-preferred" type="date" min={today(settings.timezone)} max={addDays(today(settings.timezone), 90)} value={preferredDate} onChange={e => setPreferredDate(e.target.value)} disabled={busy} />
+              <label htmlFor="urgent-reason">Reason for urgent dispatch</label>
+              <textarea id="urgent-reason" required minLength={10} maxLength={500} rows={4} value={urgentReason} onChange={e => setUrgentReason(e.target.value)} disabled={busy} placeholder="Please explain when and why you need this dispatch." />
+              {error && <p role="alert" className="error">{error}</p>}
+              <div className="action-row"><button className="primary" disabled={busy}>{busy ? "Sending…" : "Send urgent request"}</button><button type="button" className="secondary" disabled={busy} onClick={() => { setUrgentMode(false); setError(""); }}>Back to dates</button></div>
+            </form>
+          </section>
         ) : (
-          <form onSubmit={submit} className="booking-grid">
+          <><form onSubmit={submit} className="booking-grid">
             <section className="panel selection">
               <div className="section-title">
                 <span className="step">01</span>
@@ -364,6 +413,8 @@ export default function BookingPage({
               </div>
             </aside>
           </form>
+          <button className="secondary urgent-entry" onClick={() => { setUrgentMode(true); setError(""); setRequestId(crypto.randomUUID()); }}>Need an urgent dispatch? Request admin review</button>
+          </>
         )}
         <CustomerHistory refreshKey={receipt?.reference || ""} />
         <footer>

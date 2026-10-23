@@ -7,4 +7,4 @@ export const bookingStatuses = {
 } as const;
 export type BookingStatus = keyof typeof bookingStatuses;
 export const activeBookingStatuses = ["confirmed", "being_packed", "shipped"];
-export const activeBookingMessage = "You already have an active booking. Please wait until it is completed or cancelled.";
+export const activeBookingMessage = "You already have an active booking or urgent request. Please wait until it is completed, cancelled, or declined.";

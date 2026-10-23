@@ -17,7 +17,13 @@ type Booking = {
   royal_mail_tracking: string | null;
   notifications: Record<string, { status: string; error: string | null }>;
 };
+type UrgentRequest = { id: string; reference: string; name: string; email: string; reason: string; preferred_date: string | null; assigned_date: string | null; status: "pending" | "approved" | "rejected"; notification_status: string; notification_error: string | null; created_at: string };
+type Customer = { id: string; name: string; email: string; email_verified: boolean; created_at: string; booking_count: number };
+type GDPRRequest = { id: string; status: "pending" | "completed"; requested_at: string; completed_at: string | null; name: string | null; email: string | null; booking_count: number; active_count: number };
 type Data = {
+  gdprRequests: GDPRRequest[];
+  customers: Customer[];
+  urgentRequests: UrgentRequest[];
   demo: boolean;
   settings: Settings;
   bookings: Booking[];
@@ -28,6 +34,10 @@ type Data = {
 export default function AdminPage() {
   const [statusDraft, setStatusDraft] = useState<Record<string, BookingStatus>>({});
   const [tracking, setTracking] = useState<Record<string, string>>({});
+  const [urgentDates, setUrgentDates] = useState<Record<string, string>>({});
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [deletionConfirm, setDeletionConfirm] = useState<Record<string, string>>({});
+  const [customerFilter, setCustomerFilter] = useState<"all" | "verified" | "unverified">("all");
   const [data, setData] = useState<Data | null>(null),
     [login, setLogin] = useState(false),
     [username, setUsername] = useState(""),
@@ -77,10 +87,12 @@ export default function AdminPage() {
         throw Error(d.error);
       }
       setPassword("");
-      setMessage(success);
+      setMessage(d.contactEmail ? `${success} Confirmation email was ${d.emailStatus}; contact ${d.contactEmail} separately.` : d.emailStatus && d.emailStatus !== "sent" ? `${success} Customer email: ${d.emailStatus}. Check notification settings and retry where available.` : success);
       await load();
       setStatusDraft({});
       setTracking({});
+      setUrgentDates({});
+      setDeletionConfirm({});
     } catch (e) {
       setError(e instanceof Error ? e.message : "Please try again.");
     } finally {
@@ -101,6 +113,11 @@ export default function AdminPage() {
     { key: "cancelled", label: "Cancelled" },
     { key: "all", label: "All" },
   ];
+  const shownCustomers = data?.customers.filter((customer) => {
+    const matchesSearch = `${customer.name} ${customer.email}`.toLowerCase().includes(customerSearch.trim().toLowerCase());
+    const matchesFilter = customerFilter === "all" || customer.email_verified === (customerFilter === "verified");
+    return matchesSearch && matchesFilter;
+  }) || [];
   const failed =
     data?.bookings.filter(
       (b) =>
@@ -218,14 +235,14 @@ export default function AdminPage() {
               </div>
             </div>
             <nav className="admin-tabs" aria-label="Admin sections">
-              {["bookings", "availability", "settings"].map((t) => (
+              {["bookings", "urgent", "customers", "gdpr", "availability", "settings"].map((t) => (
                 <button
                   className="secondary"
                   key={t}
                   aria-pressed={tab === t}
                   onClick={() => setTab(t)}
                 >
-                  {t[0].toUpperCase() + t.slice(1)}
+                  {t === "urgent" ? `Urgent Requests (${data.urgentRequests.filter(u => u.status === "pending").length})` : t === "customers" ? `Customers (${data.customers.length})` : t === "gdpr" ? `GDPR Requests (${data.gdprRequests.filter(r => r.status === "pending").length})` : t[0].toUpperCase() + t.slice(1)}
                 </button>
               ))}
             </nav>
@@ -377,6 +394,86 @@ export default function AdminPage() {
                   )}
                 </section>
               </>
+            )}
+            {tab === "urgent" && (
+              <section className="panel table-wrap">
+                <h2>Urgent requests</h2>
+                <p className="muted">Review each request and choose a dispatch date. Approval creates a Confirmed booking; rejection emails the customer.</p>
+                <table>
+                  <thead><tr><th>Customer</th><th>Request</th><th>Status</th><th>Decision</th></tr></thead>
+                  <tbody>{data.urgentRequests.map(u => (
+                    <tr key={u.id}>
+                      <td><strong>{u.name}</strong><small>{u.email}</small><small>{u.reference}</small></td>
+                      <td><strong>{u.reason}</strong><small>Requested {new Date(u.created_at).toLocaleString("en-GB")}</small>{u.preferred_date && <small>Preferred: {dateLabel(u.preferred_date)}</small>}</td>
+                      <td><span className={"badge " + (u.status === "approved" ? "confirmed" : u.status === "rejected" ? "cancelled" : "being_packed")}>{u.status === "approved" ? "Confirmed" : u.status === "pending" ? "Pending review" : "Rejected"}</span>{u.assigned_date && <small>Dispatch: {dateLabel(u.assigned_date)}</small>}{u.status === "rejected" && <small title={u.notification_error || ""}>Email: {u.notification_status}</small>}</td>
+                      <td>{u.status === "pending" ? (
+                        <div className="admin-table-actions urgent-actions">
+                          <form className="tracking-form" onSubmit={e => { e.preventDefault(); void act({ action: "urgent_approve", id: u.id, date: urgentDates[u.id] ?? u.preferred_date ?? "" }, "Urgent request approved and booking confirmed."); }}>
+                            <label htmlFor={`urgent-date-${u.id}`}>Confirmed dispatch date</label>
+                            <input id={`urgent-date-${u.id}`} type="date" required min={new Date().toLocaleDateString("en-CA", { timeZone: data.settings.timezone })} value={urgentDates[u.id] ?? u.preferred_date ?? ""} onChange={e => setUrgentDates(v => ({ ...v, [u.id]: e.target.value }))} disabled={busy} />
+                            <button className="primary" disabled={busy}>Approve & confirm</button>
+                          </form>
+                          <button className="secondary" disabled={busy} onClick={() => { if (confirm(`Reject urgent request ${u.reference}? The customer will be emailed.`)) void act({ action: "urgent_reject", id: u.id }, "Urgent request rejected."); }}>Reject</button>
+                        </div>
+                      ) : u.status === "rejected" && ["failed", "pending"].includes(u.notification_status) ? <button className="secondary" disabled={busy} onClick={() => void act({ action: "urgent_retry", id: u.id }, "Customer email retried.")}>Retry email</button> : <span className="muted">—</span>}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+                {data.urgentRequests.length === 0 && <div className="empty">No urgent requests yet.</div>}
+              </section>
+            )}
+            {tab === "customers" && (
+              <section className="panel table-wrap customers-panel">
+                <div className="customers-heading">
+                  <div>
+                    <h2>Registered customers</h2>
+                    <p className="muted">Accounts created through customer registration.</p>
+                  </div>
+                  <span className="customers-total">{data.customers.length} total</span>
+                </div>
+                <div className="customers-tools">
+                  <label htmlFor="customer-search" className="sr-only">Search customers</label>
+                  <input id="customer-search" type="search" placeholder="Search name or email" value={customerSearch} onChange={e => setCustomerSearch(e.target.value)} />
+                  <label htmlFor="customer-filter" className="sr-only">Filter by verification</label>
+                  <select id="customer-filter" value={customerFilter} onChange={e => setCustomerFilter(e.target.value as "all" | "verified" | "unverified")}>
+                    <option value="all">All accounts</option>
+                    <option value="verified">Verified</option>
+                    <option value="unverified">Unverified</option>
+                  </select>
+                </div>
+                <table>
+                  <thead><tr><th>Customer</th><th>Email</th><th>Joined</th><th>Verification</th><th>Bookings</th></tr></thead>
+                  <tbody>{shownCustomers.map(customer => (
+                    <tr key={customer.id}>
+                      <td><strong>{customer.name}</strong></td>
+                      <td><a href={`mailto:${customer.email}`}>{customer.email}</a></td>
+                      <td>{new Date(customer.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</td>
+                      <td><span className={"badge " + (customer.email_verified ? "confirmed" : "being_packed")}>{customer.email_verified ? "Verified" : "Not verified"}</span></td>
+                      <td>{customer.booking_count}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+                {shownCustomers.length === 0 && <div className="empty">{data.customers.length === 0 ? "No customers have registered yet." : "No customers match this search."}</div>}
+              </section>
+            )}
+            {tab === "gdpr" && (
+              <section className="panel table-wrap gdpr-panel">
+                <h2>GDPR Requests</h2>
+                <p className="muted">Review each erasure request before deleting. The action permanently removes the customer account, sessions, urgent requests, bookings, Royal Mail tracking, and notification records from this database. Check legal retention obligations, external email/WhatsApp providers, and backups separately.</p>
+                <table>
+                  <thead><tr><th>Customer</th><th>Requested</th><th>Records</th><th>Status</th><th>Action</th></tr></thead>
+                  <tbody>{data.gdprRequests.map(request => (
+                    <tr key={request.id}>
+                      <td>{request.status === "pending" ? <><strong>{request.name}</strong><small>{request.email}</small></> : <span className="muted">Account deleted</span>}</td>
+                      <td>{new Date(request.requested_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</td>
+                      <td>{request.status === "pending" ? <>{request.booking_count} booking{request.booking_count === 1 ? "" : "s"}{request.active_count > 0 && <small className="gdpr-warning">{request.active_count} active booking{request.active_count === 1 ? "" : "s"}</small>}</> : "Removed"}</td>
+                      <td><span className={"badge " + (request.status === "pending" ? "being_packed" : "completed")}>{request.status === "pending" ? "Pending review" : "Completed"}</span>{request.completed_at && <small>{new Date(request.completed_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</small>}</td>
+                      <td>{request.status === "pending" ? <div className="gdpr-delete-control"><label htmlFor={`delete-${request.id}`}>Type DELETE to confirm</label><input id={`delete-${request.id}`} value={deletionConfirm[request.id] || ""} onChange={e => setDeletionConfirm(v => ({ ...v, [request.id]: e.target.value }))} autoComplete="off" disabled={busy} /><button type="button" className="secondary gdpr-delete-button" disabled={busy || deletionConfirm[request.id] !== "DELETE"} onClick={() => { if (confirm(`Permanently delete ${request.name}'s account and ${request.booking_count} booking(s)? This cannot be undone.`)) void act({ action: "gdpr_delete", id: request.id }, "Account and linked records deleted."); }}>Delete account & data</button></div> : <span className="muted">—</span>}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+                {data.gdprRequests.length === 0 && <div className="empty">No data deletion requests yet.</div>}
+              </section>
             )}
             {tab === "availability" && (
               <>

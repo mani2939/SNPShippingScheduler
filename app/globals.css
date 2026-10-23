@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap");
 :root {
   --ink: #111111;
   --text: #444444;
@@ -1149,3 +1148,101 @@ h1, h2, h3 { font-weight: 500; color: var(--ink); }
   background: #46413c;
   color: white;
 }
+.urgent-entry{margin:20px 0 30px}.urgent-panel{max-width:760px;padding:36px}.urgent-form{display:grid;gap:12px;margin-top:24px}.urgent-form textarea{width:100%;resize:vertical;border:1px solid #d8ddd5;border-radius:8px;padding:14px;font:inherit;color:inherit}.urgent-form .action-row{margin-top:12px}.urgent-actions .primary{width:auto;min-height:40px}.urgent-actions{min-width:240px}
+
+.customers-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+.customers-heading h2 { margin: 0 0 6px; }
+.customers-heading p { margin: 0; }
+.customers-total { white-space: nowrap; color: var(--muted); font-size: 14px; }
+.customers-tools { display: flex; gap: 12px; margin-bottom: 22px; }
+.customers-tools input { flex: 1; min-width: 180px; }
+.customers-tools select { min-width: 160px; }
+.customers-panel td a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 640px) {
+  .customers-heading, .customers-tools { flex-direction: column; align-items: stretch; }
+  .customers-tools select { width: 100%; }
+}
+.cookie-banner {
+  position: fixed;
+  z-index: 1000;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(960px, calc(100% - 32px));
+  padding: 22px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 10px 42px rgb(0 0 0 / 16%);
+}
+.cookie-banner-copy { max-width: 620px; }
+.cookie-banner-copy strong { display: block; color: var(--ink); font-size: 17px; }
+.cookie-banner-copy p { margin: 5px 0 7px; font-size: 13px; line-height: 1.55; }
+.cookie-banner-copy a, .cookie-page a { text-decoration: underline; text-underline-offset: 3px; }
+.cookie-banner-actions { display: flex; gap: 10px; flex-shrink: 0; }
+.cookie-banner-actions button {
+  min-width: 98px;
+  min-height: 42px;
+  padding: 8px 16px;
+  color: #fff;
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: 8px;
+  font-weight: 600;
+}
+.cookie-settings {
+  position: fixed;
+  z-index: 1000;
+  bottom: 14px;
+  left: 14px;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgb(0 0 0 / 10%);
+  font-size: 12px;
+}
+.cookie-page { max-width: 850px; margin: 0 auto; padding: 52px 24px 100px; }
+.cookie-page > p { margin: 16px 0 28px; }
+.cookie-page .panel { padding: 28px; margin-bottom: 20px; }
+.cookie-page .panel p { margin: 12px 0; }
+.cookie-page .panel h2 { margin-bottom: 8px; }
+@media (max-width: 720px) {
+  .cookie-banner { align-items: stretch; flex-direction: column; gap: 14px; bottom: 12px; }
+  .cookie-banner-actions { width: 100%; }
+  .cookie-banner-actions button { flex: 1; }
+}
+.account-links a { text-decoration: underline; font-size: 14px; }
+.erasure-page { max-width: 780px; margin: 0 auto; padding: 52px 24px 110px; }
+.erasure-page h1 { margin: 12px 0 30px; }
+.erasure-page .panel { padding: 30px; }
+.erasure-page .panel p { margin-bottom: 18px; }
+.erasure-page .panel a:not(.primary) { text-decoration: underline; text-underline-offset: 3px; }
+.erasure-signin { display: inline-flex; width: auto; margin-right: 10px; }
+.gdpr-panel > p { max-width: 900px; margin: 10px 0 22px; }
+.gdpr-delete-control { display: grid; gap: 7px; min-width: 175px; }
+.gdpr-delete-control label { font-size: 12px; font-weight: 600; }
+.gdpr-delete-control input { max-width: 175px; }
+.gdpr-delete-button { color: #8c2929; border-color: #8c2929; }
+.gdpr-warning { color: #8c2929; font-weight: 600; }

@@ -38,9 +38,11 @@ const descriptions: Record<Mode, string> = {
 export default function AccountForm({
   initialMode,
   initialToken,
+  afterLogin,
 }: {
   initialMode: string;
   initialToken: string;
+  afterLogin: string;
 }) {
   const [mode, setMode] = useState<Mode>(
     modes.includes(initialMode as Mode) ? (initialMode as Mode) : "login",
@@ -100,7 +102,7 @@ export default function AccountForm({
       const data = await response.json();
       if (!response.ok) throw Error(data.error);
       if (mode === "login") {
-        window.location.assign("/");
+        window.location.assign(afterLogin);
         return;
       }
       setMessage(data.message);
@@ -272,6 +274,8 @@ export default function AccountForm({
               <button disabled={busy} onClick={() => change("resend")}>
                 Resend verification email
               </button>
+              <Link href="/privacy/erasure">Request deletion of your data</Link>
+              <a href="https://ico.org.uk/for-the-public/your-right-to-get-your-data-deleted/" target="_blank" rel="noopener noreferrer">ICO right to erasure guidance</a>
             </div>
           ) : (
             !done && (

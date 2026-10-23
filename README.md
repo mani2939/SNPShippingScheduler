@@ -132,3 +132,25 @@ Deploy the entire source folder, including `migrations/`, `scripts/`, `lib/`, an
 Successful registration now replaces the entire form and tabs with a Check your inbox confirmation, sign-in link and option to request another email. Password reset and verification email requests use the same confirmation pattern. Errors leave the form available for correction. Account existence remains private and no delivery guarantee is displayed.
 
 The customer and admin portal use Shapes and Pieces styling: Playfair Display headings, Poppins body text, black buttons, warm white surfaces, and a pink/gold accent. Google Fonts are requested by the browser with system fallbacks, so the build does not depend on downloading fonts. This update requires no additional database migration.
+
+## Urgent dispatch requests
+
+Verified customers can submit an urgent request with a reason and optional preferred date. It stays pending without reserving a slot; while pending, that customer cannot make a regular booking or another urgent request. Admins review requests in **Urgent Requests**, assign a date from today through the next 90 days, and approve or reject them. Approval checks the three-place daily capacity, creates a Confirmed booking, and sends the normal customer email and business WhatsApp alert. Exceptional dates outside Monday/Wednesday/Friday are allowed only through admin approval. Rejection sends the customer an email and releases the customer to book again. Failed rejection emails can be retried in the admin tab; unknown provider outcomes require checking Resend before retrying. The customer page also shows a pending request and the latest rejected request.
+
+Migration `0005_urgent_requests.sql` runs automatically via `npm run vercel-build` against `SNP_DATABASE_URL` on the next deployment. It creates the urgent queue and safeguards the one-active-request rule at database level. Deploy the entire source folder, including this migration. Production email and WhatsApp delivery still require their configured Vercel environment variables and a live end-to-end check.
+
+## Admin customer directory
+
+The protected **Customers** tab lists registered customer names and email addresses, sign-up dates, verification status, and booking totals. Admins can search by name or email and filter verified or unverified accounts. The response only selects directory fields and booking totals; password hashes and session tokens are not returned. This uses the existing database schema and needs no new migration.
+
+## Cookie choices and privacy review
+
+The site-wide cookie notice offers equal Accept and Decline controls. The choice is kept in browser local storage for up to 180 days and can be changed with the persistent Cookie settings button. The essential `snp_customer` and `snp_admin` session cookies remain available after either choice. Google Fonts are no longer loaded automatically; they are requested only after Accept. The `/cookies` page explains the current storage and third-party font request. No analytics or advertising cookies are added by this application.
+
+A cookie banner alone does not establish full UK GDPR compliance. Before production launch, the business should verify the live domain's actual cookies and third-party services, publish a complete privacy notice with its legal identity and lawful bases, set account and booking retention/deletion periods, and document how it handles access and erasure requests. Current application bookings and customer accounts do not have an automatic deletion schedule.
+
+## Right-to-erasure requests
+
+The customer sign-in screen links to the ICO's right-to-erasure guidance and to `/privacy/erasure`. Verified signed-in customers can submit a request for their own account; customers who cannot sign in can contact `support@shapesandpieces.com`. A pending request is shown on the customer page and pauses new bookings. The admin **GDPR Requests** tab shows pending requests and record counts. After reviewing any legal retention obligations, an admin must type `DELETE` and confirm before the application removes that customer's account, sessions, tokens, urgent requests, linked and same-email legacy bookings, tracking values, and notification records in one database transaction. The completed request retains only an anonymous request ID and timestamps. The app then attempts a confirmation email and reports a failure to the admin.
+
+Migration `0006_gdpr_erasure.sql` is applied automatically by Vercel's `vercel-build` through `SNP_DATABASE_URL`. This action removes data from the active application database. It cannot erase copies already held by Resend, Twilio, Royal Mail, Vercel/Neon backups, or other external systems. The business must review those services and any lawful retention exception, and respond to the individual appropriately. Admins should not click Delete until that review is complete.

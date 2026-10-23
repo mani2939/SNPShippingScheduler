@@ -1,3 +1,4 @@
+import { erasurePendingMessage } from "../../../lib/gdpr-erasure";
 import { activeBookingMessage } from "../../../lib/booking-status";
 import { getCustomer } from "../../../lib/customer-auth";
 import { randomUUID } from "node:crypto";
@@ -67,8 +68,12 @@ export async function POST(request: NextRequest) {
           );
         return existing;
       }
+      const erasure = await db.query("SELECT 1 FROM gdpr_erasure_requests WHERE customer_id=$1 AND status='pending' LIMIT 1", [customer.id]);
+      if (erasure.rowCount) throw Error(erasurePendingMessage);
       const active = await db.query("SELECT id FROM bookings WHERE customer_id=$1 AND status IN ('confirmed','being_packed','shipped') LIMIT 1", [customer.id]);
       if (active.rowCount) throw Error(activeBookingMessage);
+      const urgent = await db.query("SELECT id FROM urgent_requests WHERE customer_id=$1 AND status='pending' LIMIT 1", [customer.id]);
+      if (urgent.rowCount) throw Error(activeBookingMessage);
       const occupied = (
         await db.query(
           "SELECT slot FROM bookings WHERE dispatch_date=$1 AND status <> 'cancelled' UNION SELECT slot FROM blocked_slots WHERE dispatch_date=$1",
@@ -124,6 +129,8 @@ export async function POST(request: NextRequest) {
     );
   } catch (e) {
     const code = (e as { code?: string }).code;
+    if (e instanceof Error && e.message === erasurePendingMessage)
+      return NextResponse.json({ error: erasurePendingMessage }, { status: 409 });
     if ((e as { constraint?: string }).constraint === "one_active_booking_per_customer" || (e instanceof Error && e.message === activeBookingMessage))
       return NextResponse.json({ error: activeBookingMessage }, { status: 409 });
     if (code === "23505")

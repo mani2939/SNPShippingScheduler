@@ -8,13 +8,14 @@ export const metadata: Metadata = {
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mode?: string; token?: string }>;
+  searchParams: Promise<{ mode?: string; token?: string; next?: string }>;
 }) {
   const query = await searchParams;
   return (
     <AccountForm
       initialMode={query.mode || "login"}
       initialToken={typeof query.token === "string" ? query.token : ""}
+      afterLogin={query.next === "/privacy/erasure" ? query.next : "/"}
     />
   );
 }
