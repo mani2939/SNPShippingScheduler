@@ -32,22 +32,24 @@ test("booking workflow blocks repeat active requests, requires tracking, and rel
   assert.equal((await customerHistory(db,owner)).bookings[0].status,"being_packed");
   await updateBookingStatus(db,id,"shipped");
   const shipped=(await customerHistory(db,owner)).bookings[0];
-  assert.equal(shipped.status,"shipped");
+  assert.equal(shipped.status,"completed");
   assert.equal(shipped.royal_mail_tracking,"AB123456789GB");
   assert.ok(shipped.dispatched_at);
-  await assert.rejects(book(owner,"2026-09-23"),/active booking/);
+  const next=await book(owner,"2026-09-23");
   assert.deepEqual((await customerHistory(db,other)).bookings,[]);
-  await book(other,"2026-09-23");
+  await book(other,"2026-09-23","slot-2");
   await saveTracking(db,id,"CD123456789GB");
-  assert.deepEqual((await customerHistory(db,owner)).bookings[0].dispatched_at,shipped.dispatched_at);
-  await updateBookingStatus(db,id,"completed");
-  const next=await book(owner,"2026-09-25");
+  assert.deepEqual((await customerHistory(db,owner)).bookings.find(b=>b.reference===id)?.dispatched_at,shipped.dispatched_at);
+  await assert.rejects(updateBookingStatus(db,id,"completed"),/Invalid status change/);
+  await assert.rejects(updateBookingStatus(db,next,"completed"),/Invalid status change/);
   await assert.rejects(updateBookingStatus(db,id,"confirmed"),/Invalid status change/);
   // Database guard prevents reactivation even outside the admin API.
   await assert.rejects(pg.query("UPDATE bookings SET status='confirmed' WHERE id=$1",[id]),/active booking/);
   await updateBookingStatus(db,next,"cancelled");
   await assert.rejects(saveTracking(db,next,"AB123456789GB"),/cancelled/);
-  await book(owner,"2026-09-28");
+  const direct=await book(owner,"2026-09-28");
+  await updateBookingStatus(db,direct,"completed","EF123456789GB");
+  assert.equal((await customerHistory(db,owner)).bookings[0].status,"completed");
   assert.equal(trackingURL("AB123456789GB"),"https://www.royalmail.com/portal/rm/track?trackNumber=AB123456789GB");
  } finally {await pg.close();}
 });

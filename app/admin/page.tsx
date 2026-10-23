@@ -36,7 +36,7 @@ export default function AdminPage() {
     [message, setMessage] = useState(""),
     [tab, setTab] = useState("bookings"),
     [busy, setBusy] = useState(false),
-    [filter, setFilter] = useState("upcoming"),
+    [filter, setFilter] = useState<BookingStatus | "all">("confirmed"),
     [settings, setSettings] = useState<Settings | null>(null);
   async function load() {
     try {
@@ -79,6 +79,8 @@ export default function AdminPage() {
       setPassword("");
       setMessage(success);
       await load();
+      setStatusDraft({});
+      setTracking({});
     } catch (e) {
       setError(e instanceof Error ? e.message : "Please try again.");
     } finally {
@@ -90,11 +92,15 @@ export default function AdminPage() {
       (b) => activeBookingStatuses.includes(b.status),
     ) || [];
   const shown =
-    data?.bookings.filter(
-      (b) =>
-        filter === "all" ||
-        (activeBookingStatuses.includes(b.status)),
-    ) || [];
+    data?.bookings.filter((b) => filter === "all" || b.status === filter) || [];
+  const statusTabs: { key: BookingStatus | "all"; label: string }[] = [
+    { key: "confirmed", label: "Confirmed" },
+    { key: "being_packed", label: "Being Packed" },
+    { key: "shipped", label: "Shipped" },
+    { key: "completed", label: "Completed" },
+    { key: "cancelled", label: "Cancelled" },
+    { key: "all", label: "All" },
+  ];
   const failed =
     data?.bookings.filter(
       (b) =>
@@ -225,20 +231,21 @@ export default function AdminPage() {
             </nav>
             {tab === "bookings" && (
               <>
-                <div className="action-row" style={{ marginBottom: 16 }}>
-                  <label htmlFor="filter" style={{ margin: 0 }}>
-                    Show
-                  </label>
-                  <select
-                    id="filter"
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
-                    style={{ maxWidth: 220 }}
-                  >
-                    <option value="upcoming">Active bookings</option>
-                    <option value="all">All recent bookings</option>
-                  </select>
-                </div>
+                <nav className="booking-status-tabs" aria-label="Filter bookings by status">
+                  {statusTabs.map(({ key, label }) => (
+                    <button
+                      type="button"
+                      key={key}
+                      aria-current={filter === key ? "page" : undefined}
+                      onClick={() => setFilter(key)}
+                    >
+                      <span>{label}</span>
+                      <span className="status-tab-count">
+                        {key === "all" ? data.bookings.length : data.bookings.filter((b) => b.status === key).length}
+                      </span>
+                    </button>
+                  ))}
+                </nav>
                 <p className="notifications-note">
                   “Sent” means the provider accepted the notification. For an
                   unknown result, check the provider’s delivery log before
@@ -313,11 +320,23 @@ export default function AdminPage() {
                                   const status = statusDraft[b.id] ?? b.status;
                                   if (status === "cancelled" && !confirm("Cancel this booking and release its slot? Tell the customer directly; no cancellation email is sent.")) return;
                                   const number = tracking[b.id] ?? b.royal_mail_tracking;
-                                  void act({ action: "status", id: b.id, status, ...(status === "shipped" && number ? { tracking: number } : {}) }, "Booking status updated.");
+                                  void act(
+                                    { action: "status", id: b.id, status,
+                                      ...(["shipped", "completed"].includes(status) && number ? { tracking: number } : {}) },
+                                    status === "shipped" ? "Marked Completed and Royal Mail tracking saved." : "Booking status updated.",
+                                  );
                                 }}>
                                   <label htmlFor={`status-${b.id}`}>Booking status</label>
                                   <select id={`status-${b.id}`} value={statusDraft[b.id] ?? b.status} disabled={busy} onChange={e => setStatusDraft(v => ({ ...v, [b.id]: e.target.value as BookingStatus }))}>
-                                    {Object.entries(bookingStatuses).filter(([status]) => b.status === "shipped" ? ["shipped","completed","cancelled"].includes(status) : status !== "completed").map(([status,label]) => <option key={status} value={status}>{label}</option>)}
+                                    {Object.entries(bookingStatuses)
+                                      .filter(([status]) => b.status === "shipped"
+                                        ? ["shipped", "completed", "cancelled"].includes(status)
+                                        : true)
+                                      .map(([status, label]) => (
+                                        <option key={status} value={status}>
+                                          {status === "shipped" && b.status !== "shipped" ? "Shipped → Completed" : label}
+                                        </option>
+                                      ))}
                                   </select>
                                   <button className="secondary" disabled={busy}>Update status</button>
                                 </form>
@@ -349,8 +368,7 @@ export default function AdminPage() {
                     <div className="empty">
                       <Package size={32} style={{ marginBottom: 12 }} />
                       <p>
-                        No {filter === "upcoming" ? "active " : ""}dispatches
-                        yet.
+                        No {filter === "all" ? "" : `${bookingStatuses[filter].toLowerCase()} `}bookings yet.
                       </p>
                       <p className="muted">
                         Customer bookings will appear here.
