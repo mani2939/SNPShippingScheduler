@@ -986,64 +986,79 @@ td small {
 .history-heading h2 {
   margin: 8px 0 0;
 }
-.history-latest {
-  color: var(--muted);
-  line-height: 1.7;
+.history-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 22px;
 }
-.history-list {
-  list-style: none;
-  padding: 0;
-  margin: 20px 0 0;
-}
-.history-list li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 20px 0;
-  border-top: 1px solid var(--line, #e4e7e3);
-  flex-wrap: wrap;
-}
-.history-list li > div {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-.history-list li > div > span {
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
   font-size: 13px;
-  color: var(--muted);
-  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.history-table th {
+  padding: 11px 16px;
+  background: #f7f5f1;
+  color: #66615b;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.history-table th:first-child { border-radius: 7px 0 0 7px; }
+.history-table th:last-child { border-radius: 0 7px 7px 0; }
+.history-table td {
+  padding: 18px 16px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.history-table tr:last-child td { border-bottom: 0; }
+.history-date { font-weight: 600; white-space: nowrap; color: var(--ink); }
+.history-reference { font-weight: 500; white-space: nowrap; }
+.history-booked { color: var(--muted); white-space: nowrap; }
+.history-table .history-status {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
 }
 .history-status {
-  padding: 6px 12px;
+  padding: 6px 11px;
   border-radius: 20px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
-.history-confirmed {
-  background: #edf4ff;
-  color: #25548a;
+.history-confirmed { background: #edf4ff; color: #25548a; }
+.history-dispatched { background: #e5f2e9; color: #21613b; }
+.history-cancelled { background: #f5eded; color: #874545; }
+.history-track {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--ink);
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-color: #c3b8a5;
+  text-underline-offset: 3px;
 }
-.history-dispatched {
-  background: #e5f2e9;
-  color: #21613b;
-}
-.history-cancelled {
-  background: #f5eded;
-  color: #874545;
-}
-.history-pagination {
-  margin-top: 20px;
-  font-size: 13px;
-}
-@media (max-width: 650px) {
-  .customer-history {
-    padding: 20px;
-  }
-  .header .action-row {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
+.history-track:hover { text-decoration-color: currentColor; }
+.history-empty { color: #aaa49b; }
+.history-pagination { margin-top: 18px; font-size: 13px; }
+@media (max-width: 760px) {
+  .customer-history { padding: 20px; }
+  .history-table-wrap { overflow: visible; }
+  .history-table, .history-table tbody, .history-table tr, .history-table td { display: block; width: 100%; }
+  .history-table thead { display: none; }
+  .history-table tr { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .history-table tr:last-child { border-bottom: 0; }
+  .history-table td { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 7px 0; border: 0; text-align: right; white-space: normal; }
+  .history-table td::before { content: attr(data-label); color: var(--muted); font-size: 11px; font-weight: 500; text-align: left; flex: 0 0 86px; }
+  .history-date, .history-reference, .history-booked, .history-track { white-space: normal; }
+  .history-track { overflow-wrap: anywhere; }
+  .header .action-row { flex-wrap: wrap; justify-content: flex-end; }
 }
 
 .tracking-link {

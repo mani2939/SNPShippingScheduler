@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { bookingStatuses } from "../lib/booking-status";
 import { trackingURL } from "../lib/tracking";
-import { dateLabel } from "../lib/schedule";
 import type { CustomerBooking } from "../lib/customer-history";
 export default function CustomerHistory({
   refreshKey,
@@ -84,62 +83,51 @@ export default function CustomerHistory({
         </p>
       ) : (
         <>
-          {page === 0 && (
-            <p className="history-latest">
-              Your latest booking was made on{" "}
-              <strong>
-                {new Intl.DateTimeFormat("en-GB", {
-                  dateStyle: "long",
-                  timeZone: bookings[0].timezone,
-                }).format(new Date(bookings[0].created_at))}
-              </strong>{" "}
-              for dispatch on{" "}
-              <strong>{dateLabel(bookings[0].dispatch_date)}</strong>.
-            </p>
-          )}
-          <ul className="history-list">
-            {bookings.map((booking) => (
-              <li key={booking.reference}>
-                <div>
-                  <strong>{dateLabel(booking.dispatch_date)}</strong>
-                  <span>
-                    {booking.reference} · {booking.timezone}
-                  </span>
-                  <span>
-                    Booked{" "}
-                    {new Intl.DateTimeFormat("en-GB", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                      timeZone: booking.timezone,
-                    }).format(new Date(booking.created_at))}
-                  </span>
-                  {booking.royal_mail_tracking && (
-                    <a
-                      className="tracking-link"
-                      href={trackingURL(booking.royal_mail_tracking)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Royal Mail Track Delivery · {booking.royal_mail_tracking}
-                    </a>
-                  )}
-                  {booking.dispatched_at && (
-                    <span>
-                      Shipped{" "}
+          <div className="history-table-wrap">
+            <table className="history-table">
+              <thead>
+                <tr>
+                  <th scope="col">Dispatch</th>
+                  <th scope="col">Reference</th>
+                  <th scope="col">Booked</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Royal Mail tracking</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.map((booking) => (
+                  <tr key={booking.reference}>
+                    <td data-label="Dispatch" className="history-date">
                       {new Intl.DateTimeFormat("en-GB", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                        timeZone: booking.timezone,
-                      }).format(new Date(booking.dispatched_at))}
-                    </span>
-                  )}
-                </div>
-                <span className={`history-status history-${booking.status}`}>
-                  {bookingStatuses[booking.status]}
-                </span>
-              </li>
-            ))}
-          </ul>
+                        day: "2-digit", month: "short", year: "numeric", timeZone: "UTC",
+                      }).format(new Date(`${booking.dispatch_date}T12:00:00Z`))}
+                    </td>
+                    <td data-label="Reference" className="history-reference">{booking.reference}</td>
+                    <td data-label="Booked" className="history-booked">
+                      {new Intl.DateTimeFormat("en-GB", {
+                        day: "2-digit", month: "short", year: "numeric",
+                        hour: "2-digit", minute: "2-digit", timeZone: booking.timezone,
+                      }).format(new Date(booking.created_at))}
+                    </td>
+                    <td data-label="Status">
+                      <span className={`history-status history-${booking.status}`}>
+                        {bookingStatuses[booking.status]}
+                      </span>
+                    </td>
+                    <td data-label="Royal Mail tracking">
+                      {booking.royal_mail_tracking ? (
+                        <a className="history-track" href={trackingURL(booking.royal_mail_tracking)} target="_blank" rel="noopener noreferrer"
+                          aria-label={`Track booking ${booking.reference} with Royal Mail, tracking number ${booking.royal_mail_tracking}`}>
+                          <span>{booking.royal_mail_tracking}</span>
+                          <span aria-hidden="true">↗</span>
+                        </a>
+                      ) : <span className="history-empty">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
       {(page > 0 || hasMore) && (
