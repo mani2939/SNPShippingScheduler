@@ -1197,6 +1197,19 @@ h1, h2, h3 { font-weight: 500; color: var(--ink); }
 .customers-tools input { flex: 1 1 auto; min-width: 0; }
 .customers-tools select { flex: 0 0 205px; width: 205px; }
 .customers-panel td a { color: inherit; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.customer-delete-trigger { min-width: 76px; }
+.customer-delete-row td { padding: 20px 24px; background: #fff9f7; }
+.customer-delete-confirm { display: flex; align-items: start; justify-content: space-between; gap: 28px; }
+.customer-delete-confirm > div:first-child { max-width: 510px; }
+.customer-delete-confirm strong { color: #802c2c; font-size: 14px; }
+.customer-delete-confirm p { margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.customer-delete-confirm p.gdpr-warning { color: #8c2929; }
+.customer-delete-controls { display: grid; gap: 7px; min-width: 275px; }
+.customer-delete-controls label { font-size: 11px; font-weight: 600; }
+.customer-delete-controls input { max-width: 170px; min-height: 38px; padding: 7px 10px; }
+.customer-delete-controls > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.customer-delete-final { color: #8c2929; border-color: #be8686; font-weight: 600; }
+.customer-delete-final:hover:not(:disabled) { background: #fff0ee; }
 .sr-only {
   position: absolute;
   width: 1px;
@@ -1213,6 +1226,9 @@ h1, h2, h3 { font-weight: 500; color: var(--ink); }
   .customers-heading { padding: 20px 16px 0; }
   .customers-tools { padding: 0 16px; }
   .customers-tools select { flex: 0 0 auto; width: 100%; }
+}
+@media (max-width: 900px) {
+  .customer-delete-confirm { flex-direction: column; gap: 16px; }
 }
 .cookie-banner {
   position: fixed;

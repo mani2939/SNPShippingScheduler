@@ -142,7 +142,7 @@ Migration `0005_urgent_requests.sql` runs automatically via `npm run vercel-buil
 
 ## Admin customer directory
 
-The protected **Customers** tab lists registered customer names and email addresses, sign-up dates, verification status, and booking totals. Admins can search by name or email and filter verified or unverified accounts. The response only selects directory fields and booking totals; password hashes and session tokens are not returned. This uses the existing database schema and needs no new migration.
+The protected **Customers** tab lists registered customer names and email addresses, sign-up dates, verification status, and booking totals. Admins can search by name or email and filter verified or unverified accounts. Each row has a Delete action with typed confirmation; deleting an account also removes its sessions, tokens, urgent requests, bookings (including matching legacy records), tracking, and notification records. Any pending GDPR erasure request is marked completed anonymously, and a deletion confirmation email is attempted. This action cannot be undone. The response only selects directory fields and booking totals; password hashes and session tokens are not returned. This uses the existing database schema and needs no new migration.
 
 ## Cookie choices and privacy review
 

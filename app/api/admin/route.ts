@@ -1,4 +1,4 @@
-import { eraseCustomer, sendErasureCompletion } from "../../../lib/gdpr-erasure";
+import { deleteCustomerByAdmin, eraseCustomer, sendAccountDeletionConfirmation } from "../../../lib/gdpr-erasure";
 import { decideUrgentRequest, sendUrgentRejection } from "../../../lib/urgent";
 import { updateBookingStatus, saveTracking } from "../../../lib/dispatch";
 import { NextRequest, NextResponse } from "next/server";
@@ -43,7 +43,7 @@ export async function GET() {
       pool().query("SELECT * FROM blocked_slots"),
       availability(1),
       pool().query("SELECT u.*,c.name,c.email FROM urgent_requests u JOIN customers c ON c.id=u.customer_id ORDER BY (u.status='pending') DESC,u.created_at DESC LIMIT 500"),
-      pool().query("SELECT c.id,c.name,c.email,c.email_verified,c.created_at,COUNT(b.id)::int AS booking_count FROM customers c LEFT JOIN bookings b ON b.customer_id=c.id GROUP BY c.id ORDER BY c.created_at DESC"),
+      pool().query("SELECT c.id,c.name,c.email,c.email_verified,c.created_at,(SELECT COUNT(*)::int FROM bookings b WHERE b.customer_id=c.id OR (b.customer_id IS NULL AND lower(b.email)=lower(c.email))) AS booking_count,(SELECT COUNT(*)::int FROM bookings b WHERE (b.customer_id=c.id OR (b.customer_id IS NULL AND lower(b.email)=lower(c.email))) AND b.status IN ('confirmed','being_packed','shipped')) AS active_count FROM customers c ORDER BY c.created_at DESC"),
       pool().query("SELECT r.id,r.status,r.requested_at,r.completed_at,c.name,c.email,(SELECT COUNT(*)::int FROM bookings b WHERE b.customer_id=c.id OR (b.customer_id IS NULL AND lower(b.email)=lower(c.email))) AS booking_count,(SELECT COUNT(*)::int FROM bookings b WHERE b.customer_id=c.id AND b.status IN ('confirmed','being_packed','shipped')) AS active_count FROM gdpr_erasure_requests r LEFT JOIN customers c ON c.id=r.customer_id ORDER BY (r.status='pending') DESC,r.requested_at DESC LIMIT 500"),
     ]);
     return NextResponse.json(
@@ -158,7 +158,11 @@ export async function POST(request: NextRequest) {
       });
     } else if (input.action === "gdpr_delete") {
       const erased = await transaction(db => eraseCustomer(db, input.id));
-      const emailStatus = await sendErasureCompletion(erased.email, erased.name, input.id);
+      const emailStatus = await sendAccountDeletionConfirmation(erased.email, erased.name, input.id);
+      return NextResponse.json({ ok: true, deletedBookings: erased.bookingCount, emailStatus, contactEmail: emailStatus === "sent" ? null : erased.email });
+    } else if (input.action === "customer_delete") {
+      const erased = await transaction(db => deleteCustomerByAdmin(db, input.id));
+      const emailStatus = await sendAccountDeletionConfirmation(erased.email, erased.name, input.id);
       return NextResponse.json({ ok: true, deletedBookings: erased.bookingCount, emailStatus, contactEmail: emailStatus === "sent" ? null : erased.email });
     } else if (input.action === "urgent_approve" || input.action === "urgent_reject") {
       const result = await decideUrgentRequest(input.id, input.action === "urgent_approve" ? "approve" : "reject", input.date);

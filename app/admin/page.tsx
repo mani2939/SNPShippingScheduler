@@ -3,7 +3,7 @@ import Link from "next/link";
 import Brand from "../brand";
 import { bookingStatuses, activeBookingStatuses, type BookingStatus } from "../../lib/booking-status";
 import { trackingURL } from "../../lib/tracking";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Package, ArrowUpRight, LogOut, RefreshCw, ClipboardList, Zap, Users, ShieldCheck, CalendarDays, Settings2, CheckCircle2 } from "lucide-react";
 import { dateLabel, type Settings } from "../../lib/schedule";
 type BookingFilter = "all" | "confirmed" | "in_progress" | "completed";
@@ -19,7 +19,7 @@ type Booking = {
   notifications: Record<string, { status: string; error: string | null }>;
 };
 type UrgentRequest = { id: string; reference: string; name: string; email: string; reason: string; preferred_date: string | null; assigned_date: string | null; status: "pending" | "approved" | "rejected"; notification_status: string; notification_error: string | null; created_at: string };
-type Customer = { id: string; name: string; email: string; email_verified: boolean; created_at: string; booking_count: number };
+type Customer = { id: string; name: string; email: string; email_verified: boolean; created_at: string; booking_count: number; active_count: number };
 type GDPRRequest = { id: string; status: "pending" | "completed"; requested_at: string; completed_at: string | null; name: string | null; email: string | null; booking_count: number; active_count: number };
 type Data = {
   gdprRequests: GDPRRequest[];
@@ -37,6 +37,7 @@ export default function AdminPage() {
   const [tracking, setTracking] = useState<Record<string, string>>({});
   const [urgentDates, setUrgentDates] = useState<Record<string, string>>({});
   const [customerSearch, setCustomerSearch] = useState("");
+  const [customerDeleteId, setCustomerDeleteId] = useState<string | null>(null);
   const [deletionConfirm, setDeletionConfirm] = useState<Record<string, string>>({});
   const [customerFilter, setCustomerFilter] = useState<"all" | "verified" | "unverified">("all");
   const [data, setData] = useState<Data | null>(null),
@@ -94,6 +95,7 @@ export default function AdminPage() {
       setTracking({});
       setUrgentDates({});
       setDeletionConfirm({});
+      setCustomerDeleteId(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Please try again.");
     } finally {
@@ -426,15 +428,24 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <table>
-                  <thead><tr><th>Customer</th><th>Email</th><th>Joined</th><th>Verification</th><th>Bookings</th></tr></thead>
+                  <thead><tr><th>Customer</th><th>Email</th><th>Joined</th><th>Verification</th><th>Bookings</th><th>Action</th></tr></thead>
                   <tbody>{shownCustomers.map(customer => (
-                    <tr key={customer.id}>
+                    <Fragment key={customer.id}>
+                    <tr>
                       <td><strong>{customer.name}</strong></td>
                       <td><a href={`mailto:${customer.email}`}>{customer.email}</a></td>
                       <td>{new Date(customer.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</td>
                       <td><span className={"badge " + (customer.email_verified ? "confirmed" : "being_packed")}>{customer.email_verified ? "Verified" : "Not verified"}</span></td>
                       <td>{customer.booking_count}</td>
+                      <td><button type="button" className="secondary customer-delete-trigger" aria-expanded={customerDeleteId === customer.id} disabled={busy} onClick={() => { setCustomerDeleteId(customerDeleteId === customer.id ? null : customer.id); setDeletionConfirm({}); }}>Delete</button></td>
                     </tr>
+                    {customerDeleteId === customer.id && <tr className="customer-delete-row"><td colSpan={6}>
+                      <div className="customer-delete-confirm">
+                        <div><strong>Delete {customer.name}&apos;s account?</strong><p>This removes the account, {customer.booking_count} booking{customer.booking_count === 1 ? "" : "s"}, urgent requests, tracking and notification records from this app. It cannot be undone. Check external provider records and backups separately.</p>{customer.active_count > 0 && <p className="gdpr-warning">{customer.active_count} active booking{customer.active_count === 1 ? " will" : "s will"} also be removed.</p>}</div>
+                        <div className="customer-delete-controls"><label htmlFor={`customer-delete-${customer.id}`}>Type DELETE to confirm</label><input id={`customer-delete-${customer.id}`} value={deletionConfirm[customer.id] || ""} onChange={e => setDeletionConfirm(v => ({ ...v, [customer.id]: e.target.value }))} autoComplete="off" disabled={busy} /><div><button type="button" className="secondary customer-delete-final" disabled={busy || deletionConfirm[customer.id] !== "DELETE"} onClick={() => { if (confirm(`Permanently delete ${customer.name}'s account and ${customer.booking_count} booking(s)?`)) void act({ action: "customer_delete", id: customer.id }, "Customer account and linked records deleted."); }}>Delete account & data</button><button type="button" className="secondary" disabled={busy} onClick={() => { setCustomerDeleteId(null); setDeletionConfirm({}); }}>Cancel</button></div></div>
+                      </div>
+                    </td></tr>}
+                    </Fragment>
                   ))}</tbody>
                 </table>
                 {shownCustomers.length === 0 && <div className="empty">{data.customers.length === 0 ? "No customers have registered yet." : "No customers match this search."}</div>}

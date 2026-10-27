@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
-import { eraseCustomer, requestErasure } from "../lib/gdpr-erasure.ts";
+import { deleteCustomerByAdmin, eraseCustomer, requestErasure } from "../lib/gdpr-erasure.ts";
 import type { PoolClient } from "pg";
 
 function adapter(pg: PGlite) {
@@ -52,5 +52,33 @@ test("erasure removes linked and matching legacy customer data while keeping onl
     assert.equal((await pg.query("SELECT 1 FROM bookings WHERE id=$1",[keepId])).rows.length,1);
     assert.deepEqual((await pg.query("SELECT status,customer_id,completed_at IS NOT NULL AS done FROM gdpr_erasure_requests WHERE id=$1",[request.id])).rows[0],{status:"completed",customer_id:null,done:true});
     await assert.rejects(eraseCustomer(db,request.id),/no longer pending/);
+  } finally { await pg.close(); }
+});
+
+test("admin deletion removes an account and closes any pending erasure request", async () => {
+  const pg = new PGlite();
+  try {
+    await pg.exec(await readFile(new URL("../lib/schema.sql", import.meta.url), "utf8"));
+    const db = adapter(pg);
+    const customerId = randomUUID();
+    const otherId = randomUUID();
+    const bookingId = randomUUID();
+    await pg.query("INSERT INTO customers(id,name,email,password_hash,email_verified) VALUES($1,'Delete Me','delete@example.com','hash',true),($2,'Keep Me','keep@example.com','hash',true)", [customerId,otherId]);
+    await pg.query("INSERT INTO bookings(id,request_id,reference,name,email,dispatch_date,slot,timezone,customer_id) VALUES($1,$2,'ADMIN-DELETE','Delete Me','delete@example.com','2026-10-30','slot-1','Europe/London',$3)", [bookingId,randomUUID(),customerId]);
+    await pg.query("INSERT INTO notifications(booking_id,channel) VALUES($1,'email')", [bookingId]);
+    await pg.query("INSERT INTO customer_sessions(token_hash,customer_id,expires_at) VALUES('admin-delete-session',$1,now()+interval '1 day')", [customerId]);
+    const request = await requestErasure(db,customerId);
+    await pg.query("BEGIN");
+    const result = await deleteCustomerByAdmin(db,customerId);
+    await pg.query("COMMIT");
+    assert.equal(result.bookingCount,1);
+    assert.equal((await pg.query("SELECT 1 FROM customers WHERE id=$1",[customerId])).rows.length,0);
+    assert.equal((await pg.query("SELECT 1 FROM bookings WHERE id=$1",[bookingId])).rows.length,0);
+    assert.equal((await pg.query("SELECT 1 FROM notifications WHERE booking_id=$1",[bookingId])).rows.length,0);
+    assert.equal((await pg.query("SELECT 1 FROM customer_sessions WHERE customer_id=$1",[customerId])).rows.length,0);
+    assert.deepEqual((await pg.query("SELECT status,customer_id,completed_at IS NOT NULL AS done FROM gdpr_erasure_requests WHERE id=$1",[request.id])).rows[0],{status:"completed",customer_id:null,done:true});
+    assert.equal((await pg.query("SELECT 1 FROM customers WHERE id=$1",[otherId])).rows.length,1);
+    await assert.rejects(deleteCustomerByAdmin(db,customerId),/not found/);
+    await assert.rejects(deleteCustomerByAdmin(db,"bad-id"),/Invalid customer account/);
   } finally { await pg.close(); }
 });
