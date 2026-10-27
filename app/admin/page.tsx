@@ -4,9 +4,9 @@ import Brand from "../brand";
 import { bookingStatuses, activeBookingStatuses, type BookingStatus } from "../../lib/booking-status";
 import { trackingURL } from "../../lib/tracking";
 import { useEffect, useState } from "react";
-import { Package, ArrowUpRight, LogOut, RefreshCw, ClipboardList, Zap, Users, ShieldCheck, CalendarDays, Settings2, Bell } from "lucide-react";
+import { Package, ArrowUpRight, LogOut, RefreshCw, ClipboardList, Zap, Users, ShieldCheck, CalendarDays, Settings2, CheckCircle2 } from "lucide-react";
 import { dateLabel, type Settings } from "../../lib/schedule";
-type BookingFilter = BookingStatus | "all" | "active" | "needs_attention";
+type BookingFilter = "all" | "confirmed" | "in_progress" | "completed";
 type Booking = {
   id: string;
   reference: string;
@@ -47,7 +47,7 @@ export default function AdminPage() {
     [message, setMessage] = useState(""),
     [tab, setTab] = useState("bookings"),
     [busy, setBusy] = useState(false),
-    [filter, setFilter] = useState<BookingFilter>("active"),
+    [filter, setFilter] = useState<BookingFilter>("confirmed"),
     [settings, setSettings] = useState<Settings | null>(null);
   async function load() {
     try {
@@ -100,32 +100,20 @@ export default function AdminPage() {
       setBusy(false);
     }
   }
-  const upcoming =
-    data?.bookings.filter(
-      (b) => activeBookingStatuses.includes(b.status),
-    ) || [];
-  const needsAttention = (booking: Booking) => booking.status !== "cancelled" &&
-    Object.values(booking.notifications).some((notice) => ["failed", "pending", "unknown", "sending"].includes(notice.status));
+  const stageCount = (stage: BookingFilter) => data?.bookings.filter((booking) =>
+    stage === "all" || (stage === "in_progress"
+      ? booking.status === "being_packed" || booking.status === "shipped"
+      : booking.status === stage)).length || 0;
   const shown = data?.bookings.filter((booking) => {
     if (filter === "all") return true;
-    if (filter === "active") return activeBookingStatuses.includes(booking.status);
-    if (filter === "needs_attention") return needsAttention(booking);
+    if (filter === "in_progress") return booking.status === "being_packed" || booking.status === "shipped";
     return booking.status === filter;
   }) || [];
-  const statusTabs: { key: BookingFilter; label: string }[] = [
-    { key: "active", label: "Active" },
-    { key: "confirmed", label: "Confirmed" },
-    { key: "being_packed", label: "Being Packed" },
-    { key: "shipped", label: "Shipped" },
-    { key: "completed", label: "Completed" },
-    { key: "cancelled", label: "Cancelled" },
-    { key: "needs_attention", label: "Needs attention" },
-    { key: "all", label: "All bookings" },
-  ];
-  const filterCount = (key: BookingFilter) => key === "all" ? (data?.bookings.length || 0) :
-    key === "active" ? (data?.bookings.filter(b => activeBookingStatuses.includes(b.status)).length || 0) :
-    key === "needs_attention" ? (data?.bookings.filter(needsAttention).length || 0) :
-    (data?.bookings.filter(b => b.status === key).length || 0);
+  const stageLabel: Record<BookingFilter, string> = { all: "All bookings", confirmed: "Confirmed", in_progress: "In progress", completed: "Completed" };
+  function showBookings(stage: BookingFilter) {
+    setTab("bookings");
+    setFilter(stage);
+  }
   const pageTitles: Record<string, string> = {
     bookings: "Dispatch overview", urgent: "Urgent requests", customers: "Customers",
     gdpr: "GDPR requests", availability: "Availability", settings: "Settings",
@@ -144,7 +132,6 @@ export default function AdminPage() {
     const matchesFilter = customerFilter === "all" || customer.email_verified === (customerFilter === "verified");
     return matchesSearch && matchesFilter;
   }) || [];
-  const failed = data?.bookings.filter(needsAttention).length || 0;
   const urgentCount = data?.urgentRequests.filter(r => r.status === "pending").length || 0;
   const gdprCount = data?.gdprRequests.filter(r => r.status === "pending").length || 0;
   return (
@@ -203,7 +190,14 @@ export default function AdminPage() {
               <nav className="admin-side-nav" aria-label="Admin sections">
                 <div className="admin-side-group">
                   <span className="admin-side-label">OPERATIONS</span>
-                  <button type="button" aria-pressed={tab === "bookings"} onClick={() => setTab("bookings")}><ClipboardList size={18} /><span>Bookings</span><em>{data.bookings.length}</em></button>
+                  <button type="button" aria-pressed={tab === "bookings"} onClick={() => showBookings("all")}><ClipboardList size={18} /><span>Bookings</span><em>{data.bookings.length}</em></button>
+                  <div className="admin-booking-subnav" aria-label="Booking stages">
+                    {(["confirmed", "in_progress", "completed"] as const).map((stage) => (
+                      <button key={stage} type="button" aria-pressed={tab === "bookings" && filter === stage} onClick={() => showBookings(stage)}>
+                        <span>{stageLabel[stage]}</span><em>{stageCount(stage)}</em>
+                      </button>
+                    ))}
+                  </div>
                   <button type="button" aria-pressed={tab === "urgent"} onClick={() => setTab("urgent")}><Zap size={18} /><span>Urgent requests</span>{urgentCount > 0 && <em className="admin-nav-alert">{urgentCount}</em>}</button>
                   <button type="button" aria-pressed={tab === "availability"} onClick={() => setTab("availability")}><CalendarDays size={18} /><span>Availability</span></button>
                 </div>
@@ -235,31 +229,27 @@ export default function AdminPage() {
               {error && <div role="alert" className="error">{error}</div>}
               {message && <div role="status" className="status-message">{message}</div>}
               {tab === "bookings" && <div className="admin-metrics">
-                <button type="button" className="admin-metric" onClick={() => setFilter("active")}>
-                  <span className="admin-metric-top"><span>Active bookings</span><Package size={19} /></span>
-                  <strong>{upcoming.length.toString().padStart(2, "0")}</strong>
-                  <small>Confirmed or in progress</small>
+                <button type="button" className="admin-metric" aria-pressed={filter === "confirmed"} onClick={() => showBookings("confirmed")}>
+                  <span className="admin-metric-top"><span>Confirmed</span><ClipboardList size={19} /></span>
+                  <strong>{stageCount("confirmed").toString().padStart(2, "0")}</strong>
+                  <small>Ready to start packing</small>
                 </button>
-                <button type="button" className="admin-metric" onClick={() => setTab("urgent")}>
-                  <span className="admin-metric-top"><span>Urgent to review</span><Zap size={19} /></span>
-                  <strong>{urgentCount.toString().padStart(2, "0")}</strong>
-                  <small>Waiting for a decision</small>
+                <button type="button" className="admin-metric" aria-pressed={filter === "in_progress"} onClick={() => showBookings("in_progress")}>
+                  <span className="admin-metric-top"><span>In progress</span><Package size={19} /></span>
+                  <strong>{stageCount("in_progress").toString().padStart(2, "0")}</strong>
+                  <small>Being packed or shipped</small>
                 </button>
-                <button type="button" className="admin-metric" onClick={() => setFilter("needs_attention")}>
-                  <span className="admin-metric-top"><span>Notifications to check</span><Bell size={19} /></span>
-                  <strong>{failed.toString().padStart(2, "0")}</strong>
-                  <small>Email or WhatsApp delivery</small>
+                <button type="button" className="admin-metric" aria-pressed={filter === "completed"} onClick={() => showBookings("completed")}>
+                  <span className="admin-metric-top"><span>Completed</span><CheckCircle2 size={19} /></span>
+                  <strong>{stageCount("completed").toString().padStart(2, "0")}</strong>
+                  <small>Finished dispatches</small>
                 </button>
               </div>}
             {tab === "bookings" && (
               <>
                 <div className="booking-toolbar">
-                  <div><h2>Booking workflow</h2><p>{shown.length} {shown.length === 1 ? "booking" : "bookings"} in this view</p></div>
-                  <label htmlFor="booking-status-filter">Status
-                    <select id="booking-status-filter" value={filter} onChange={e => setFilter(e.target.value as BookingFilter)}>
-                      {statusTabs.map(({ key, label }) => <option key={key} value={key}>{label} · {filterCount(key)}</option>)}
-                    </select>
-                  </label>
+                  <div><h2>{stageLabel[filter]}</h2><p>{shown.length} {shown.length === 1 ? "booking" : "bookings"} in this view</p></div>
+                  <button type="button" className="secondary booking-all-button" onClick={() => showBookings(filter === "all" ? "confirmed" : "all")}>{filter === "all" ? "Show confirmed" : `View all bookings · ${stageCount("all")}`}</button>
                 </div>
                 <section className="panel table-wrap">
                   <table>
@@ -379,7 +369,7 @@ export default function AdminPage() {
                     <div className="empty">
                       <Package size={32} style={{ marginBottom: 12 }} />
                       <p>
-                        {filter === "needs_attention" ? "No notifications need attention." : filter === "active" ? "No active bookings yet." : filter === "all" ? "No bookings yet." : `No ${bookingStatuses[filter].toLowerCase()} bookings yet.`}
+                        {filter === "all" ? "No bookings yet." : `No ${stageLabel[filter].toLowerCase()} bookings yet.`}
                       </p>
                       <p className="muted">
                         Customer bookings will appear here.
@@ -524,7 +514,7 @@ export default function AdminPage() {
                 <h2>Booking settings</h2>
                 <p className="muted">
                   Each Monday, Wednesday and Friday has exactly three places.
-                  Bookings close at midnight before dispatch.
+                  Customer bookings require at least two calendar days’ notice.
                 </p>
                 <label htmlFor="timezone">Dispatch timezone</label>
                 <select

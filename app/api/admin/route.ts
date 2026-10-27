@@ -41,7 +41,7 @@ export async function GET() {
         "SELECT b.*,COALESCE(jsonb_object_agg(n.channel,jsonb_build_object('status',n.status,'error',n.last_error)) FILTER(WHERE n.channel IS NOT NULL),'{}'::jsonb) AS notifications FROM bookings b LEFT JOIN notifications n ON n.booking_id=b.id GROUP BY b.id ORDER BY b.dispatch_date DESC,b.created_at DESC LIMIT 500",
       ),
       pool().query("SELECT * FROM blocked_slots"),
-      availability(),
+      availability(1),
       pool().query("SELECT u.*,c.name,c.email FROM urgent_requests u JOIN customers c ON c.id=u.customer_id ORDER BY (u.status='pending') DESC,u.created_at DESC LIMIT 500"),
       pool().query("SELECT c.id,c.name,c.email,c.email_verified,c.created_at,COUNT(b.id)::int AS booking_count FROM customers c LEFT JOIN bookings b ON b.customer_id=c.id GROUP BY c.id ORDER BY c.created_at DESC"),
       pool().query("SELECT r.id,r.status,r.requested_at,r.completed_at,c.name,c.email,(SELECT COUNT(*)::int FROM bookings b WHERE b.customer_id=c.id OR (b.customer_id IS NULL AND lower(b.email)=lower(c.email))) AS booking_count,(SELECT COUNT(*)::int FROM bookings b WHERE b.customer_id=c.id AND b.status IN ('confirmed','being_packed','shipped')) AS active_count FROM gdpr_erasure_requests r LEFT JOIN customers c ON c.id=r.customer_id ORDER BY (r.status='pending') DESC,r.requested_at DESC LIMIT 500"),
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
         const settings = (
           await db.query("SELECT value FROM settings WHERE id=1 FOR SHARE")
         ).rows[0].value as Settings;
-        if (!eligible(input.date, settings))
+        if (!eligible(input.date, settings, new Date(), 1))
           throw Error("Choose an upcoming dispatch day.");
         await db.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
           input.date,

@@ -64,7 +64,9 @@ export default function BookingPage({
       setSettings(d.settings);
       setDays(d.days);
       setDate(
-        (prev) => prev || d.days.find((day: Day) => day.available)?.date || "",
+        (prev) => d.days.some((day: Day) => day.date === prev && day.available)
+          ? prev
+          : d.days.find((day: Day) => day.available)?.date || "",
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load availability.");
@@ -200,7 +202,7 @@ export default function BookingPage({
         <div className="page-intro">
           <div>
             <h1>Book your dispatch.</h1>
-            <p>Choose your dispatch date. We’ll reserve a place for you.</p>
+            <p>Choose a dispatch date at least two calendar days ahead. We’ll reserve a place for you.</p>
           </div>
           <div className="dispatch-note">
             <CalendarDays size={19} />
@@ -367,7 +369,7 @@ export default function BookingPage({
                 <span>
                   Availability is checked again when you book.
                   <br />
-                  Bookings close at midnight before the dispatch day.
+                  Book at least two calendar days before dispatch.
                 </span>
               </div>
             </section>

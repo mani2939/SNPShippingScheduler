@@ -3,6 +3,7 @@
 Customer booking site and username-and-password-protected admin portal, prepared for Vercel and `snpdispatch.com`.
 
 - Mondays, Wednesdays and Fridays only.
+- Standard customer bookings require at least two calendar days' notice in the configured dispatch timezone. Urgent dates need admin approval.
 - Exactly three places per day. Verified customers select only an available date; capacity counts are private and the server assigns an internal slot automatically. No appointment times.
 - Customer name and email, on-page confirmation and a booking reference.
 - PostgreSQL transactions and a unique index prevent overbooking, including simultaneous requests.
@@ -13,7 +14,7 @@ Customer booking site and username-and-password-protected admin portal, prepared
 
 The code builds and can run locally. The owner has configured Neon and Resend in Vercel; production connectivity and deployment have not been verified from this workspace. Without a database the account screens remain visible, but accounts and bookings are unavailable. The admin portal always requires authentication and never exposes a public preview. No real email or WhatsApp messages have been sent.
 
-Default operational choices: Europe/London timezone, 42-day booking window, no same-day bookings. Admin can change timezone and booking horizon. Cancellation releases the slot but does not email the customer; the confirmation prompt tells the administrator to contact them directly.
+Default operational choices: Europe/London timezone, 42-day booking window, and a fixed two-calendar-day notice period for standard bookings. Admin can change timezone and booking horizon. Admin slot controls still show tomorrow's dispatch day. Cancellation releases the slot but does not email the customer; the confirmation prompt tells the administrator to contact them directly.
 
 ## Run locally
 
@@ -117,7 +118,7 @@ The history endpoint derives ownership from the verified customer session and re
 
 Customers can have one active booking at a time. **Confirmed**, **Being Packed**, and **Shipped** are active; **Completed** and **Cancelled** permit a new booking. New requests default to Confirmed. The customer page displays the existing request instead of the booking form while it is active. The booking API locks the customer row inside its transaction before checking for an active request, preserving retries of the same request ID. A database trigger also guards against new duplicate active requests.
 
-Admin can save tracking separately without changing status and mark a request Being Packed. Selecting **Shipped → Completed** saves tracking, records the shipping timestamp, and completes the request in one database update. **Completed** is also present in the status dropdown; closing a request directly requires tracking. Admin can cancel an active request. Completed and Cancelled requests cannot be reopened through the admin API. Tracking can be corrected on any non-cancelled request, including completed ones. The admin booking tabs show counts for Confirmed, Being Packed, Shipped (legacy requests), Completed, Cancelled, and All.
+Admin can save tracking separately without changing status and mark a request Being Packed. Selecting **Shipped → Completed** saves tracking, records the shipping timestamp, and completes the request in one database update. **Completed** is also present in the status dropdown; closing a request directly requires tracking. Admin can cancel an active request. Completed and Cancelled requests cannot be reopened through the admin API. Tracking can be corrected on any non-cancelled request, including completed ones. The admin Bookings sidebar groups records into Confirmed, In progress (Being Packed or Shipped), and Completed. View all bookings includes cancelled records.
 
 Customers see their status, Royal Mail reference and tracking link in My bookings. Refresh history for updated status. These are admin-managed fulfilment statuses; live carrier status is not fetched, and status changes do not send an additional email. Shipping records the dispatch timestamp; tracking corrections preserve it.
 

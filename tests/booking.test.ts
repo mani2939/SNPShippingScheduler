@@ -14,16 +14,26 @@ import {
   nextAvailableSlot,
 } from "../lib/schedule.ts";
 const now = new Date("2026-09-17T10:00:00Z");
-test("schedule exposes only future Mon/Wed/Fri, with a bounded horizon", () => {
+test("schedule exposes only Mon/Wed/Fri with two days' notice and a bounded horizon", () => {
   const dates = dispatchDates(defaults, now);
-  assert.equal(dates.length, 18);
-  assert.equal(dates[0], "2026-09-18");
+  assert.equal(dates.length, 17);
+  assert.equal(dates[0], "2026-09-21");
   assert.ok(
     dates.every((d) =>
       [1, 3, 5].includes(new Date(d + "T12:00:00Z").getUTCDay()),
     ),
   );
   assert.ok(dates.every((d) => d <= "2026-10-29"));
+});
+test("customer bookings require two calendar days while admins can manage tomorrow", () => {
+  const tuesday = new Date("2026-10-27T20:00:00Z");
+  assert.equal(eligible("2026-10-28", defaults, tuesday), false);
+  assert.equal(dispatchDates(defaults, tuesday)[0], "2026-10-30");
+  assert.equal(eligible("2026-10-28", defaults, tuesday, 1), true);
+  const sundayNight = new Date("2026-10-25T23:59:00Z");
+  assert.equal(eligible("2026-10-26", defaults, sundayNight), false);
+  assert.equal(dispatchDates(defaults, sundayNight)[0], "2026-10-28");
+  assert.equal(eligible("2026-10-28", defaults, new Date("2026-10-26T21:00:00Z")), true);
 });
 test("same-day and invalid weekdays cannot be booked", () => {
   assert.equal(

@@ -4,6 +4,7 @@ export type Settings = {
   capacity: number;
   horizon: number;
 };
+export const bookingNoticeDays = 2;
 export const defaults: Settings = {
   timezone: "Europe/London",
   slots: [
@@ -34,20 +35,20 @@ export function validDate(date: string) {
     new Date(date + "T12:00:00Z").toISOString().slice(0, 10) === date
   );
 }
-export function eligible(date: string, settings: Settings, now = new Date()) {
+export function eligible(date: string, settings: Settings, now = new Date(), noticeDays = bookingNoticeDays) {
   const current = today(settings.timezone, now);
   return (
     validDate(date) &&
     [1, 3, 5].includes(new Date(date + "T12:00:00Z").getUTCDay()) &&
-    date > current &&
+    date >= addDays(current, noticeDays) &&
     date <= addDays(current, settings.horizon)
   );
 }
-export function dispatchDates(settings: Settings, now = new Date()) {
+export function dispatchDates(settings: Settings, now = new Date(), noticeDays = bookingNoticeDays) {
   const current = today(settings.timezone, now);
   return Array.from({ length: settings.horizon }, (_, i) =>
     addDays(current, i + 1),
-  ).filter((d) => eligible(d, settings, now));
+  ).filter((d) => eligible(d, settings, now, noticeDays));
 }
 export function dateLabel(date: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -81,11 +82,12 @@ export function validateBooking(value: unknown, settings: Settings) {
     v.email.length > 254 ||
     !/^\S+@[^\s@]+\.[^\s@]+$/.test(v.email) ||
     typeof v.date !== "string" ||
-    !eligible(v.date, settings) ||
     typeof v.requestId !== "string" ||
     !/^[0-9a-f-]{36}$/i.test(v.requestId)
   )
     throw new Error("Please enter a valid name, email, dispatch day.");
+  if (!eligible(v.date, settings))
+    throw new Error("Please choose an available dispatch date at least two calendar days ahead.");
   return {
     name: v.name.trim(),
     email: v.email.trim().toLowerCase(),

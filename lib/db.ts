@@ -1,6 +1,6 @@
 import { databaseURL } from "./database-url.mjs";
 import { Pool, type PoolClient } from "pg";
-import { defaults, dispatchDates, type Settings } from "./schedule";
+import { bookingNoticeDays, defaults, dispatchDates, type Settings } from "./schedule";
 const globalDB = globalThis as unknown as { snpPool?: Pool };
 export function pool() {
   if (!process.env.SNP_DATABASE_URL) throw new Error("Database is not configured.");
@@ -29,10 +29,10 @@ export async function getSettings() {
   const result = await pool().query("SELECT value FROM settings WHERE id=1");
   return (result.rows[0]?.value || defaults) as Settings;
 }
-export async function availability() {
+export async function availability(noticeDays = bookingNoticeDays) {
   const demo = !process.env.SNP_DATABASE_URL;
   const settings = demo ? defaults : await getSettings();
-  const dates = dispatchDates(settings);
+  const dates = dispatchDates(settings, new Date(), noticeDays);
   let taken: { dispatch_date: string; slot: string }[] = [];
   if (!demo) {
     const r = await pool().query(
