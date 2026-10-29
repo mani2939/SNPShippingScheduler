@@ -2,8 +2,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Brand from "./brand";
+import CustomerDashboard from "./customer-dashboard";
+import CustomerOrders from "./orders";
 import CustomerHistory from "./customer-history";
 import {
+  LayoutDashboard,
   Package,
   ArrowRight,
   ArrowLeft,
@@ -26,6 +29,7 @@ export default function BookingPage({
   customer: { name: string; email: string };
 }) {
   const { name, email } = customer;
+  const [section, setSection] = useState("dashboard");
   const [activeBooking, setActiveBooking] = useState<string | null>(null);
   const [deletionRequested, setDeletionRequested] = useState(false);
   const [latestRejectedUrgent, setLatestRejectedUrgent] = useState<string | null>(null);
@@ -182,22 +186,31 @@ export default function BookingPage({
     <>
       <header className="header customer-header">
         <Brand />
-        <nav className="customer-header-nav" aria-label="Account actions">
-          <a href="#booking-history" className="customer-nav-link">
-            <History size={16} aria-hidden="true" /> My bookings
-          </a>
-          <Link href="/privacy/erasure" className="customer-nav-link">
-            <ShieldCheck size={16} aria-hidden="true" /> Data deletion
-          </Link>
-          <Link href="/account?mode=forgot" className="customer-nav-link">
-            <KeyRound size={16} aria-hidden="true" /> Reset password
-          </Link>
-          <button type="button" className="customer-nav-link customer-nav-signout" disabled={busy} onClick={() => void logout()}>
-            <LogOut size={16} aria-hidden="true" /> Sign out
-          </button>
-        </nav>
+        <span className="dashboard-topbar-label">Customer workspace</span>
       </header>
-      <main className="booking-main">
+      <main className="customer-dashboard"><div className="admin-shell">
+        <aside className="admin-sidebar" aria-label="Account navigation">
+          <div className="admin-sidebar-heading">SNP DISPATCH <span>YOUR ACCOUNT</span></div>
+          <nav className="admin-side-nav" aria-label="Customer sections">
+            <div className="admin-side-group">
+              <span className="admin-side-label">YOUR WORKSPACE</span>
+              <button aria-pressed={section === "dashboard"} onClick={()=>setSection("dashboard")}><LayoutDashboard size={18}/><span>Dashboard</span></button>
+              <button aria-pressed={section === "dispatch"} onClick={()=>setSection("dispatch")}><CalendarDays size={18}/><span>Book a dispatch</span></button>
+              <button aria-pressed={section === "history"} onClick={()=>setSection("history")}><History size={18}/><span>My bookings</span></button>
+              <button aria-pressed={section === "orders"} onClick={()=>setSection("orders")}><Package size={18}/><span>Order history</span></button>
+            </div>
+            <div className="admin-side-group">
+              <span className="admin-side-label">ACCOUNT & PRIVACY</span>
+              <Link href="/account?mode=forgot"><KeyRound size={18}/><span>Reset password</span></Link>
+              <Link href="/privacy/erasure"><ShieldCheck size={18}/><span>Data deletion</span></Link>
+              <button disabled={busy} onClick={()=>void logout()}><LogOut size={18}/><span>Sign out</span></button>
+            </div>
+          </nav>
+          <div className="admin-sidebar-foot"><strong>{name}</strong><br/>{email}</div>
+        </aside>
+        <div className="customer-workspace">
+        {section === "dashboard" ? <CustomerDashboard name={name} onNavigate={setSection}/> : section === "orders" ? <CustomerOrders/> : section === "history" ? <CustomerHistory refreshKey={receipt?.reference || ""}/> : <>
+
         <div className="eyebrow">SHIPMENT SCHEDULING</div>
         <div className="page-intro">
           <div>
@@ -253,7 +266,7 @@ export default function BookingPage({
             <button className="secondary" onClick={() => void load()}>Refresh request status</button>
           </section>
         ) : activeBooking ? (
-          <section className="panel active-booking" role="status"><h2>You have an active booking</h2><p>Booking <strong>{activeBooking}</strong> is in progress. You can book again once SNP Dispatch marks it Completed or Cancelled.</p><a className="tracking-link" href="#booking-history">View your booking and tracking</a><button className="secondary" onClick={() => void load()}>Refresh booking status</button></section>
+          <section className="panel active-booking" role="status"><h2>You have an active booking</h2><p>Booking <strong>{activeBooking}</strong> is in progress. You can book again once SNP Dispatch marks it Completed or Cancelled.</p><a className="tracking-link" href="#booking-history" onClick={()=>setSection("history")}>View your booking and tracking</a><button className="secondary" onClick={() => void load()}>Refresh booking status</button></section>
         ) : (
           <>
           <section className={"panel urgent-dispatch-card" + (urgentMode ? " is-expanded" : "")} aria-labelledby="urgent-dispatch-heading">
@@ -433,12 +446,12 @@ export default function BookingPage({
           </form>
           </>
         )}
-        <CustomerHistory refreshKey={receipt?.reference || ""} />
+        </>}
         <footer>
           <span>© {new Date().getFullYear()} SNP Dispatch</span>
           <span>Monday · Wednesday · Friday</span>
         </footer>
-      </main>
+      </div></div></main>
     </>
   );
 }

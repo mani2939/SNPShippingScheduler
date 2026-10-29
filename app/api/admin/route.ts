@@ -1,3 +1,4 @@
+import { createOrder } from "../../../lib/orders";
 import { deleteCustomerByAdmin, eraseCustomer, sendAccountDeletionConfirmation } from "../../../lib/gdpr-erasure";
 import { decideUrgentRequest, sendUrgentRejection } from "../../../lib/urgent";
 import { updateBookingStatus, saveTracking } from "../../../lib/dispatch";
@@ -36,7 +37,7 @@ export async function GET() {
     await pool().query(
       "UPDATE notifications SET status='unknown',last_error='Sending was interrupted. Check the provider console.',updated_at=now() WHERE status='sending' AND updated_at<now()-interval '5 minutes'",
     );
-    const [bookings, blocked, schedule, urgent, customers, gdpr] = await Promise.all([
+    const [bookings, blocked, schedule, urgent, customers, gdpr, orders] = await Promise.all([
       pool().query(
         "SELECT b.*,COALESCE(jsonb_object_agg(n.channel,jsonb_build_object('status',n.status,'error',n.last_error)) FILTER(WHERE n.channel IS NOT NULL),'{}'::jsonb) AS notifications FROM bookings b LEFT JOIN notifications n ON n.booking_id=b.id GROUP BY b.id ORDER BY b.dispatch_date DESC,b.created_at DESC LIMIT 500",
       ),
@@ -45,6 +46,7 @@ export async function GET() {
       pool().query("SELECT u.*,c.name,c.email FROM urgent_requests u JOIN customers c ON c.id=u.customer_id ORDER BY (u.status='pending') DESC,u.created_at DESC LIMIT 500"),
       pool().query("SELECT c.id,c.name,c.email,c.email_verified,c.created_at,(SELECT COUNT(*)::int FROM bookings b WHERE b.customer_id=c.id OR (b.customer_id IS NULL AND lower(b.email)=lower(c.email))) AS booking_count,(SELECT COUNT(*)::int FROM bookings b WHERE (b.customer_id=c.id OR (b.customer_id IS NULL AND lower(b.email)=lower(c.email))) AND b.status IN ('confirmed','being_packed','shipped')) AS active_count FROM customers c ORDER BY c.created_at DESC"),
       pool().query("SELECT r.id,r.status,r.requested_at,r.completed_at,c.name,c.email,(SELECT COUNT(*)::int FROM bookings b WHERE b.customer_id=c.id OR (b.customer_id IS NULL AND lower(b.email)=lower(c.email))) AS booking_count,(SELECT COUNT(*)::int FROM bookings b WHERE b.customer_id=c.id AND b.status IN ('confirmed','being_packed','shipped')) AS active_count FROM gdpr_erasure_requests r LEFT JOIN customers c ON c.id=r.customer_id ORDER BY (r.status='pending') DESC,r.requested_at DESC LIMIT 500"),
+      pool().query("SELECT o.*,c.name,c.email FROM customer_orders o JOIN customers c ON c.id=o.customer_id ORDER BY o.order_date DESC,o.number DESC LIMIT 500"),
     ]);
     return NextResponse.json(
       {
@@ -53,6 +55,7 @@ export async function GET() {
         bookings: bookings.rows,
         urgentRequests: urgent.rows,
         customers: customers.rows,
+        orders: orders.rows,
         gdprRequests: gdpr.rows,
         blocked: blocked.rows,
         schedule: schedule.days,
@@ -113,7 +116,9 @@ export async function POST(request: NextRequest) {
       r.cookies.set("snp_admin", "", { maxAge: 0, path: "/" });
       return r;
     }
-    if (input.action === "settings") {
+    if (input.action === "order_create") {
+      await createOrder(pool(), input);
+    } else if (input.action === "settings") {
       const settings = validateSettings(input.settings);
       await pool().query("UPDATE settings SET value=$1 WHERE id=1", [
         JSON.stringify(settings),

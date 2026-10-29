@@ -1439,7 +1439,7 @@ h1, h2, h3 { font-weight: 500; color: var(--ink); }
 .admin-delivery-help { margin: 13px 16px 2px; color: var(--muted); font-size: 12px; }
 .admin-delivery-help summary { cursor: pointer; font-weight: 600; }
 .admin-delivery-help p { margin-top: 7px; line-height: 1.6; }
-@media (max-width: 1050px) {
+@media (max-width: 639px) {
   .admin-shell { grid-template-columns: 1fr; gap: 24px; }
   .admin-sidebar { position: static; min-height: auto; padding: 12px; border-radius: 13px; overflow-x: auto; }
   .admin-sidebar-heading, .admin-side-label, .admin-sidebar-foot { display: none; }
@@ -1463,3 +1463,21 @@ h1, h2, h3 { font-weight: 500; color: var(--ink); }
   .admin-intro-actions { width: 100%; }
   .admin-intro-actions button { flex: 1; justify-content: center; }
 }
+.customer-dashboard{max-width:1600px;margin:0 auto;padding:28px}.customer-workspace{min-width:0}.customer-workspace .page-intro{margin-top:12px}.order-title{display:flex;align-items:center;gap:14px;margin-top:24px}.order-title h2{margin:0}.order-detail-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:24px;margin-top:24px}.order-summary,.order-create{padding:26px}.order-summary h3{display:flex;align-items:center;gap:10px;font-size:17px;margin:0 0 24px}.order-summary dl{margin:0}.order-summary dl div{display:flex;justify-content:space-between;gap:20px;padding:12px 0}.order-summary dd{margin:0;font-variant-numeric:tabular-nums}.order-grand-total{border-top:1px solid #e6e4df;font-weight:700;margin-top:10px}.order-number{border:0;background:transparent;color:#354d30;font-weight:700;padding:8px 0;text-decoration:underline}.orders-list table{width:100%}.order-fields{display:grid;grid-template-columns:2fr 1.2fr 1.3fr .8fr;gap:18px;margin:24px 0}.order-fields input,.order-fields select{width:100%}.order-create{margin-bottom:26px}.order-create-footer{display:flex;align-items:center;justify-content:space-between;gap:20px}.order-summary p{line-height:1.8;overflow-wrap:anywhere}.customer-dashboard .admin-sidebar-foot{overflow-wrap:anywhere}@media(max-width:1000px){.order-fields{grid-template-columns:1fr 1fr}.order-detail-grid{grid-template-columns:1fr}}@media(max-width:760px){.customer-dashboard{padding:16px}.order-fields{grid-template-columns:1fr}.order-create-footer{align-items:stretch;flex-direction:column}}
+/* Shared dashboard navigation for customer and admin workspaces. */
+.dashboard-topbar-label{color:var(--muted);font-size:13px;letter-spacing:.03em}
+.admin-side-nav a{display:flex;align-items:center;gap:12px;min-height:43px;padding:10px 13px;color:#d7dbd1;text-decoration:none;border-radius:10px;font-size:14px}
+.admin-side-nav a:hover{background:#3a3e32;color:#fff}
+.admin-side-nav a svg{flex:none}
+.customer-dashboard,.admin-dashboard{max-width:1700px;padding:28px 28px 70px}
+.admin-shell{grid-template-columns:250px minmax(0,1fr);gap:30px}
+.admin-sidebar{min-height:calc(100vh - 170px)}
+.customer-workspace>.admin-intro{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;margin-bottom:30px}
+.customer-workspace .admin-intro h1{margin:8px 0 12px}
+.dashboard-section-heading{display:flex;justify-content:space-between;gap:20px;align-items:center;margin:34px 0 20px}
+.dashboard-section-heading h2{margin-bottom:6px}
+.dashboard-recent-orders table{width:100%;min-width:570px}
+.customer-metrics .dashboard-card-word{font-size:30px;line-height:1.3;margin:16px 0}
+.order-create-footer>.primary{width:auto;min-width:160px}
+@media(min-width:640px) and (max-width:1100px){.admin-shell{grid-template-columns:200px minmax(0,1fr);gap:20px}.admin-sidebar{padding:22px 10px}.admin-side-nav button,.admin-side-nav a{font-size:13px;padding:10px}.customer-metrics{grid-template-columns:1fr}.customer-workspace .booking-grid{grid-template-columns:1fr}.customer-workspace .page-intro,.customer-workspace>.admin-intro{flex-direction:column}.customer-dashboard,.admin-dashboard{padding:20px}.order-fields{grid-template-columns:1fr}.dashboard-section-heading{align-items:flex-start;flex-direction:column}}
+@media(max-width:639px){.admin-shell{grid-template-columns:1fr;gap:20px}.admin-sidebar{min-height:auto}.admin-side-nav a{white-space:nowrap}.customer-dashboard,.admin-dashboard{padding:16px}.customer-workspace>.admin-intro,.dashboard-section-heading{flex-direction:column;align-items:flex-start}.order-create-footer>.primary{width:100%}}

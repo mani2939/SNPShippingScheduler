@@ -1,4 +1,6 @@
 "use client";
+import { OrderList, money } from "../orders";
+import type { Order } from "../../lib/orders";
 import Link from "next/link";
 import Brand from "../brand";
 import { bookingStatuses, activeBookingStatuses, type BookingStatus } from "../../lib/booking-status";
@@ -22,6 +24,7 @@ type UrgentRequest = { id: string; reference: string; name: string; email: strin
 type Customer = { id: string; name: string; email: string; email_verified: boolean; created_at: string; booking_count: number; active_count: number };
 type GDPRRequest = { id: string; status: "pending" | "completed"; requested_at: string; completed_at: string | null; name: string | null; email: string | null; booking_count: number; active_count: number };
 type Data = {
+  orders: Order[];
   gdprRequests: GDPRRequest[];
   customers: Customer[];
   urgentRequests: UrgentRequest[];
@@ -36,6 +39,10 @@ export default function AdminPage() {
   const [statusDraft, setStatusDraft] = useState<Record<string, BookingStatus>>({});
   const [tracking, setTracking] = useState<Record<string, string>>({});
   const [urgentDates, setUrgentDates] = useState<Record<string, string>>({});
+  const [orderCustomer, setOrderCustomer] = useState("");
+  const [orderDate, setOrderDate] = useState("");
+  const [orderTotal, setOrderTotal] = useState("");
+  const [orderSearch, setOrderSearch] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerDeleteId, setCustomerDeleteId] = useState<string | null>(null);
   const [deletionConfirm, setDeletionConfirm] = useState<Record<string, string>>({});
@@ -88,6 +95,7 @@ export default function AdminPage() {
         }
         throw Error(d.error);
       }
+      if ((body as { action?: string }).action === "order_create") { setOrderDate(""); setOrderTotal(""); }
       setPassword("");
       setMessage(d.contactEmail ? `${success} Confirmation email was ${d.emailStatus}; contact ${d.contactEmail} separately.` : d.emailStatus && d.emailStatus !== "sent" ? `${success} Customer email: ${d.emailStatus}. Check notification settings and retry where available.` : success);
       await load();
@@ -117,10 +125,11 @@ export default function AdminPage() {
     setFilter(stage);
   }
   const pageTitles: Record<string, string> = {
-    bookings: "Dispatch overview", urgent: "Urgent requests", customers: "Customers",
+    orders: "Orders", bookings: "Dispatch overview", urgent: "Urgent requests", customers: "Customers",
     gdpr: "GDPR requests", availability: "Availability", settings: "Settings",
   };
   const pageDescriptions: Record<string, string> = {
+    orders: "Record and review customer order history.",
     bookings: "Track and progress every dispatch from confirmation to completion.",
     urgent: "Review urgent requests and assign a confirmed dispatch date.",
     customers: "Manage your registered customer directory.",
@@ -192,6 +201,7 @@ export default function AdminPage() {
               <nav className="admin-side-nav" aria-label="Admin sections">
                 <div className="admin-side-group">
                   <span className="admin-side-label">OPERATIONS</span>
+                  <button aria-pressed={tab === "orders"} onClick={()=>setTab("orders")}><Package size={18}/><span>Orders</span><em>{data.orders.length}</em></button>
                   <button type="button" aria-pressed={tab === "bookings"} onClick={() => showBookings("all")}><ClipboardList size={18} /><span>Bookings</span><em>{data.bookings.length}</em></button>
                   <div className="admin-booking-subnav" aria-label="Booking stages">
                     {(["confirmed", "in_progress", "completed"] as const).map((stage) => (
@@ -211,6 +221,8 @@ export default function AdminPage() {
                 <div className="admin-side-group">
                   <span className="admin-side-label">SYSTEM</span>
                   <button type="button" aria-pressed={tab === "settings"} onClick={() => setTab("settings")}><Settings2 size={18} /><span>Settings</span></button>
+                  <Link href="/"><ArrowUpRight size={18}/><span>Customer view</span></Link>
+                  {!data.demo && <button type="button" disabled={busy} onClick={()=>void act({action:"logout"},"")}><LogOut size={18}/><span>Sign out</span></button>}
                 </div>
               </nav>
               <p className="admin-sidebar-foot">Monday · Wednesday · Friday<br />3 places per dispatch day</p>
@@ -224,7 +236,7 @@ export default function AdminPage() {
                 </div>
                 <div className="admin-intro-actions">
                   <button type="button" className="secondary" onClick={() => void load()}><RefreshCw size={16} /> Refresh</button>
-                  {!data.demo && <button type="button" className="secondary" onClick={() => void act({ action: "logout" }, "")}><LogOut size={16} /> Sign out</button>}
+
                 </div>
               </div>
               {data.demo && <div className="notice">Admin preview · Connect the database and configure admin sign-in to manage real bookings.</div>}
@@ -408,6 +420,15 @@ export default function AdminPage() {
                 {data.urgentRequests.length === 0 && <div className="empty">No urgent requests yet.</div>}
               </section>
             )}
+            {tab === "orders" && <>
+              <form className="panel order-create" onSubmit={e=>{e.preventDefault();void act({action:"order_create",customerId:orderCustomer,date:orderDate,total:orderTotal},"Order added to customer history.");}}>
+                <h2>Add an order</h2><p className="muted">Record a past order for a customer. Total includes £4 standard shipping.</p>
+                <div className="order-fields"><div><label htmlFor="order-customer">Customer</label><select id="order-customer" required value={orderCustomer} onChange={e=>setOrderCustomer(e.target.value)}><option value="">Choose a customer</option>{data.customers.map(c=><option key={c.id} value={c.id}>{c.name} · {c.email}</option>)}</select></div><div><label htmlFor="order-date">Order date</label><input id="order-date" type="date" required value={orderDate} onChange={e=>setOrderDate(e.target.value)}/></div><div><label htmlFor="order-total">Total including shipping (£)</label><input id="order-total" type="number" min="4" max="9999999.99" step="0.01" required value={orderTotal} onChange={e=>setOrderTotal(e.target.value)}/></div><div><label htmlFor="order-shipping">Shipping</label><input id="order-shipping" value="£4.00" readOnly/></div></div>
+                <div className="order-create-footer"><span className="muted">{Number(orderTotal)>=4 ? `Subtotal ${money(Math.round(Number(orderTotal)*100)-400)} + £4.00 shipping` : "Standard shipping is always £4.00"}</span><button className="primary" disabled={busy||data.demo}>{busy?"Saving…":"Add order"}</button></div>
+              </form>
+              <div className="customers-tools"><label htmlFor="order-search">Find customer orders</label><input id="order-search" type="search" placeholder="Search customer, email or order number" value={orderSearch} onChange={e=>setOrderSearch(e.target.value)}/></div>
+              <OrderList orders={data.orders.filter(o=>`${o.name} ${o.email} ${o.number}`.toLowerCase().includes(orderSearch.toLowerCase()))}/><p className="muted">Showing up to 500 recent orders.</p>
+            </>}
             {tab === "customers" && (
               <section className="panel table-wrap customers-panel">
                 <div className="customers-heading">
@@ -437,11 +458,11 @@ export default function AdminPage() {
                       <td>{new Date(customer.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</td>
                       <td><span className={"badge " + (customer.email_verified ? "confirmed" : "being_packed")}>{customer.email_verified ? "Verified" : "Not verified"}</span></td>
                       <td>{customer.booking_count}</td>
-                      <td><button type="button" className="secondary customer-delete-trigger" aria-expanded={customerDeleteId === customer.id} disabled={busy} onClick={() => { setCustomerDeleteId(customerDeleteId === customer.id ? null : customer.id); setDeletionConfirm({}); }}>Delete</button></td>
+                      <td><button type="button" className="secondary" onClick={()=>{setOrderCustomer(customer.id);setOrderSearch(customer.email);setTab("orders");}}>Orders</button> <button type="button" className="secondary customer-delete-trigger" aria-expanded={customerDeleteId === customer.id} disabled={busy} onClick={() => { setCustomerDeleteId(customerDeleteId === customer.id ? null : customer.id); setDeletionConfirm({}); }}>Delete</button></td>
                     </tr>
                     {customerDeleteId === customer.id && <tr className="customer-delete-row"><td colSpan={6}>
                       <div className="customer-delete-confirm">
-                        <div><strong>Delete {customer.name}&apos;s account?</strong><p>This removes the account, {customer.booking_count} booking{customer.booking_count === 1 ? "" : "s"}, urgent requests, tracking and notification records from this app. It cannot be undone. Check external provider records and backups separately.</p>{customer.active_count > 0 && <p className="gdpr-warning">{customer.active_count} active booking{customer.active_count === 1 ? " will" : "s will"} also be removed.</p>}</div>
+                        <div><strong>Delete {customer.name}&apos;s account?</strong><p>This removes the account, {customer.booking_count} booking{customer.booking_count === 1 ? "" : "s"}, urgent requests, order history, tracking and notification records from this app. It cannot be undone. Check external provider records and backups separately.</p>{customer.active_count > 0 && <p className="gdpr-warning">{customer.active_count} active booking{customer.active_count === 1 ? " will" : "s will"} also be removed.</p>}</div>
                         <div className="customer-delete-controls"><label htmlFor={`customer-delete-${customer.id}`}>Type DELETE to confirm</label><input id={`customer-delete-${customer.id}`} value={deletionConfirm[customer.id] || ""} onChange={e => setDeletionConfirm(v => ({ ...v, [customer.id]: e.target.value }))} autoComplete="off" disabled={busy} /><div><button type="button" className="secondary customer-delete-final" disabled={busy || deletionConfirm[customer.id] !== "DELETE"} onClick={() => { if (confirm(`Permanently delete ${customer.name}'s account and ${customer.booking_count} booking(s)?`)) void act({ action: "customer_delete", id: customer.id }, "Customer account and linked records deleted."); }}>Delete account & data</button><button type="button" className="secondary" disabled={busy} onClick={() => { setCustomerDeleteId(null); setDeletionConfirm({}); }}>Cancel</button></div></div>
                       </div>
                     </td></tr>}
@@ -454,7 +475,7 @@ export default function AdminPage() {
             {tab === "gdpr" && (
               <section className="panel table-wrap gdpr-panel">
                 <h2>GDPR Requests</h2>
-                <p className="muted">Review each erasure request before deleting. The action permanently removes the customer account, sessions, urgent requests, bookings, Royal Mail tracking, and notification records from this database. Check legal retention obligations, external email/WhatsApp providers, and backups separately.</p>
+                <p className="muted">Review each erasure request before deleting. The action permanently removes the customer account, sessions, urgent requests, order history, bookings, Royal Mail tracking, and notification records from this database. Check legal retention obligations, external email/WhatsApp providers, and backups separately.</p>
                 <table>
                   <thead><tr><th>Customer</th><th>Requested</th><th>Records</th><th>Status</th><th>Action</th></tr></thead>
                   <tbody>{data.gdprRequests.map(request => (
