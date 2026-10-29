@@ -41,6 +41,7 @@ export default function AdminPage() {
   const [urgentDates, setUrgentDates] = useState<Record<string, string>>({});
   const [orderCustomer, setOrderCustomer] = useState("");
   const [orderDate, setOrderDate] = useState("");
+  const [orderItems, setOrderItems] = useState("");
   const [orderTotal, setOrderTotal] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
@@ -95,7 +96,7 @@ export default function AdminPage() {
         }
         throw Error(d.error);
       }
-      if ((body as { action?: string }).action === "order_create") { setOrderDate(""); setOrderTotal(""); }
+      if ((body as { action?: string }).action === "order_create") { setOrderDate(""); setOrderTotal(""); setOrderItems(""); }
       setPassword("");
       setMessage(d.contactEmail ? `${success} Confirmation email was ${d.emailStatus}; contact ${d.contactEmail} separately.` : d.emailStatus && d.emailStatus !== "sent" ? `${success} Customer email: ${d.emailStatus}. Check notification settings and retry where available.` : success);
       await load();
@@ -421,13 +422,13 @@ export default function AdminPage() {
               </section>
             )}
             {tab === "orders" && <>
-              <form className="panel order-create" onSubmit={e=>{e.preventDefault();void act({action:"order_create",customerId:orderCustomer,date:orderDate,total:orderTotal},"Order added to customer history.");}}>
-                <h2>Add an order</h2><p className="muted">Record a past order for a customer. Total includes £4 standard shipping.</p>
-                <div className="order-fields"><div><label htmlFor="order-customer">Customer</label><select id="order-customer" required value={orderCustomer} onChange={e=>setOrderCustomer(e.target.value)}><option value="">Choose a customer</option>{data.customers.map(c=><option key={c.id} value={c.id}>{c.name} · {c.email}</option>)}</select></div><div><label htmlFor="order-date">Order date</label><input id="order-date" type="date" required value={orderDate} onChange={e=>setOrderDate(e.target.value)}/></div><div><label htmlFor="order-total">Total including shipping (£)</label><input id="order-total" type="number" min="4" max="9999999.99" step="0.01" required value={orderTotal} onChange={e=>setOrderTotal(e.target.value)}/></div><div><label htmlFor="order-shipping">Shipping</label><input id="order-shipping" value="£4.00" readOnly/></div></div>
+              <form className="panel order-create" onSubmit={e=>{e.preventDefault();void act({action:"order_create",customerId:orderCustomer,date:orderDate,total:orderTotal,itemCount:orderItems},"Order added to customer history.");}}>
+                <h2>Add an order</h2><p className="muted">Record a past order for a customer. Total includes £4 standard shipping. Open the saved order to upload product and packaging photos.</p>
+                <div className="order-fields"><div><label htmlFor="order-customer">Customer</label><select id="order-customer" required value={orderCustomer} onChange={e=>setOrderCustomer(e.target.value)}><option value="">Choose a customer</option>{data.customers.map(c=><option key={c.id} value={c.id}>{c.name} · {c.email}</option>)}</select></div><div><label htmlFor="order-date">Order date</label><input id="order-date" type="date" required value={orderDate} onChange={e=>setOrderDate(e.target.value)}/></div><div><label htmlFor="order-items">Total Items Count</label><input id="order-items" type="number" min="1" max="999999" step="1" required value={orderItems} onChange={e=>setOrderItems(e.target.value)}/></div><div><label htmlFor="order-total">Total including shipping (£)</label><input id="order-total" type="number" min="4" max="9999999.99" step="0.01" required value={orderTotal} onChange={e=>setOrderTotal(e.target.value)}/></div><div><label htmlFor="order-shipping">Shipping</label><input id="order-shipping" value="£4.00" readOnly/></div></div>
                 <div className="order-create-footer"><span className="muted">{Number(orderTotal)>=4 ? `Subtotal ${money(Math.round(Number(orderTotal)*100)-400)} + £4.00 shipping` : "Standard shipping is always £4.00"}</span><button className="primary" disabled={busy||data.demo}>{busy?"Saving…":"Add order"}</button></div>
               </form>
               <div className="customers-tools"><label htmlFor="order-search">Find customer orders</label><input id="order-search" type="search" placeholder="Search customer, email or order number" value={orderSearch} onChange={e=>setOrderSearch(e.target.value)}/></div>
-              <OrderList orders={data.orders.filter(o=>`${o.name} ${o.email} ${o.number}`.toLowerCase().includes(orderSearch.toLowerCase()))}/><p className="muted">Showing up to 500 recent orders.</p>
+              <OrderList admin orders={data.orders.filter(o=>`${o.name} ${o.email} ${o.number}`.toLowerCase().includes(orderSearch.toLowerCase()))}/><p className="muted">Showing up to 500 recent orders.</p>
             </>}
             {tab === "customers" && (
               <section className="panel table-wrap customers-panel">

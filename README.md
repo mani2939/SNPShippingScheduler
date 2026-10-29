@@ -161,3 +161,15 @@ Migration `0006_gdpr_erasure.sql` is applied automatically by Vercel's `vercel-b
 Customers have a left workspace menu for dispatch booking, booking history and order history. Admins can add a historical order under **Orders**, or open **Orders** from a customer row. Enter the order date and the final total including shipping; standard shipping is fixed at £4 and the subtotal is calculated from that total. No payment or fulfilment status is inferred. Customers can read only their own orders, with 20 per page. Account erasure also removes its order history.
 
 Run `npm run db:migrate` against the target database before starting this version. Migration `0007_customer_orders.sql` adds the order table; the Vercel build command already runs migrations.
+
+### Product and packaging photos
+
+In Admin → Orders → View order, upload JPEG, PNG or WebP photos of the final product and packaging (up to 3 MB each, 12 per order). Customers can see their order’s gallery and open full-size images. Uploads require an admin session and same-origin requests; image reads require the owning customer or an admin session. Photos are stored as private database records and are deleted automatically with the order or customer account. Database storage and backups grow with uploaded images. Run migration `0008_order_photos.sql` before starting this version; no additional storage service is required.
+
+### Automatic compression before upload
+
+Admin photos are compressed locally in a Web Worker using the Squoosh-derived `@jsquash/webp` codec. The upload control accepts JPEG, PNG and WebP originals up to 25 MB and 48 megapixels. It resizes to a maximum 1600-pixel long edge, encodes WebP with method 6, and progressively lowers quality and resolution when needed to keep uploads at or below 200 KiB each. Already smaller originals are preserved if re-encoding would enlarge them. Images are processed one at a time; originals are never sent to a compression service. The UI reports original/final size and links to squoosh.app for manual tuning. Codec WASM and license notices are included in `public/codecs/`; no API key is needed. Existing photos are unchanged.
+
+### Order item count
+
+New orders require **Total Items Count**, a whole number from 1 to 999999. It appears in customer and admin order lists and summaries, plus the customer dashboard’s recent orders. Migration `0009_order_item_count.sql` adds the field; existing orders display “Not recorded” because their historical counts are unknown.

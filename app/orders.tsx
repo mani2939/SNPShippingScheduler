@@ -1,19 +1,21 @@
 "use client";
+import OrderPhotos from "./order-photos";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Package, Receipt, RefreshCw } from "lucide-react";
 import type { Order } from "../lib/orders";
 export const money = (pence: number) => new Intl.NumberFormat("en-GB", {style:"currency",currency:"GBP"}).format(pence/100);
 const orderDate = (date: string) => new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(date+"T12:00:00Z"));
-export function OrderList({ orders }: { orders: Order[] }) {
+export function OrderList({ orders, admin = false }: { orders: Order[]; admin?: boolean }) {
   const [selected, setSelected] = useState<string | null>(null);
   const order = orders.find(o => o.id === selected);
   if (order) return <div className="order-detail">
     <button className="secondary" onClick={()=>setSelected(null)}><ArrowLeft size={16}/> All orders</button>
     <div className="order-title"><h2>Order #{order.number}</h2><span className="badge">Recorded</span></div>
     <p className="muted">{orderDate(order.order_date)}</p>
-    <div className="order-detail-grid"><section className="panel order-summary"><h3><Receipt size={19}/> Order summary</h3><dl><div><dt>Subtotal</dt><dd>{money(order.total_pence-order.shipping_pence)}</dd></div><div><dt>Standard shipping</dt><dd>{money(order.shipping_pence)}</dd></div><div className="order-grand-total"><dt>Total</dt><dd>{money(order.total_pence)}</dd></div></dl></section><section className="panel order-summary"><h3><Package size={19}/> Order information</h3>{order.name && <p><strong>{order.name}</strong><br/>{order.email}</p>}<p>Order date: {orderDate(order.order_date)}</p><p className="muted">Added by SNP Dispatch.</p></section></div>
+    <div className="order-detail-grid"><section className="panel order-summary"><h3><Receipt size={19}/> Order summary</h3><dl><div><dt>Total Items Count</dt><dd>{order.item_count ?? "Not recorded"}</dd></div><div><dt>Subtotal</dt><dd>{money(order.total_pence-order.shipping_pence)}</dd></div><div><dt>Standard shipping</dt><dd>{money(order.shipping_pence)}</dd></div><div className="order-grand-total"><dt>Total</dt><dd>{money(order.total_pence)}</dd></div></dl></section><section className="panel order-summary"><h3><Package size={19}/> Order information</h3>{order.name && <p><strong>{order.name}</strong><br/>{order.email}</p>}<p>Order date: {orderDate(order.order_date)}</p><p className="muted">Added by SNP Dispatch.</p></section></div>
+    <OrderPhotos key={order.id} orderId={order.id} admin={admin}/>
   </div>;
-  return <section className="panel table-wrap orders-list"><table><thead><tr><th>Order</th><th>Date</th>{orders.some(o=>o.name) && <th>Customer</th>}<th>Shipping</th><th>Total</th><th></th></tr></thead><tbody>{orders.map(o=><tr key={o.id}><td><button className="order-number" onClick={()=>setSelected(o.id)}>#{o.number}</button></td><td>{orderDate(o.order_date)}</td>{orders.some(o=>o.name) && <td><strong>{o.name}</strong><small>{o.email}</small></td>}<td>{money(o.shipping_pence)}</td><td><strong>{money(o.total_pence)}</strong></td><td><button className="secondary" onClick={()=>setSelected(o.id)} aria-label={`View order ${o.number}`}>View order</button></td></tr>)}</tbody></table>{!orders.length && <div className="empty"><Package size={28}/><h3>No orders yet</h3><p>Orders added by SNP Dispatch will appear here.</p></div>}</section>;
+  return <section className="panel table-wrap orders-list"><table><thead><tr><th>Order</th><th>Date</th>{orders.some(o=>o.name) && <th>Customer</th>}<th>Total Items Count</th><th>Shipping</th><th>Total</th><th></th></tr></thead><tbody>{orders.map(o=><tr key={o.id}><td><button className="order-number" onClick={()=>setSelected(o.id)}>#{o.number}</button></td><td>{orderDate(o.order_date)}</td>{orders.some(o=>o.name) && <td><strong>{o.name}</strong><small>{o.email}</small></td>}<td>{o.item_count ?? "Not recorded"}</td><td>{money(o.shipping_pence)}</td><td><strong>{money(o.total_pence)}</strong></td><td><button className="secondary" onClick={()=>setSelected(o.id)} aria-label={`View order ${o.number}`}>View order</button></td></tr>)}</tbody></table>{!orders.length && <div className="empty"><Package size={28}/><h3>No orders yet</h3><p>Orders added by SNP Dispatch will appear here.</p></div>}</section>;
 }
 export default function CustomerOrders() {
   const [orders,setOrders]=useState<Order[]>([]), [page,setPage]=useState(0), [hasMore,setHasMore]=useState(false), [loading,setLoading]=useState(true), [error,setError]=useState(""), [refresh,setRefresh]=useState(0);
