@@ -1,7 +1,7 @@
-import { timingSafeEqual } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { CustomerDB } from "./customer-store.ts";
 import { migrateLegacyPhoto } from "./order-photos.ts";
-import { photoBlobStorage, type PhotoBlobStorage } from "./photo-blob.ts";
+import { photoBlobPath, photoBlobStorage, type PhotoBlobStorage } from "./photo-blob.ts";
 
 // Fail closed when CRON_SECRET is missing, including outside Vercel.
 export function authorizedPhotoCleanup(authorization: string | null, secret: string | undefined) {
@@ -48,4 +48,24 @@ export async function migrateLegacyOrderPhotos(db: CustomerDB, storage: PhotoBlo
     migrated++;
   }
   return migrated;
+}
+
+// Optional authenticated live check. Uses the same adapter as customer images,
+// with a tiny synthetic image and a durable deletion intent; no customer records.
+export async function verifyPhotoBlobStorage(db: CustomerDB, storage: PhotoBlobStorage = photoBlobStorage) {
+  const bytes = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5N8AAAAASUVORK5CYII=", "base64");
+  const pathname = photoBlobPath(`verification-${randomUUID()}`, "image/png");
+  await db.query("INSERT INTO photo_blob_deletions(pathname,not_before) VALUES($1,now()+interval '1 hour')", [pathname]);
+  try {
+    await storage.upload(pathname, bytes, "image/png");
+    const stream = await storage.read(pathname);
+    if (!stream || !Buffer.from(await new Response(stream).arrayBuffer()).equals(bytes)) {
+      throw Error("Blob verification failed.");
+    }
+  } finally {
+    await storage.remove([pathname]);
+    if (await storage.read(pathname)) throw Error("Blob deletion verification failed.");
+    await db.query("DELETE FROM photo_blob_deletions WHERE pathname=$1", [pathname]);
+  }
+  return true;
 }

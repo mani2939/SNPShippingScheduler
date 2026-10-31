@@ -183,3 +183,5 @@ Admin photos are compressed locally in a Web Worker using the Squoosh-derived `@
 ### Order item count
 
 New orders require **Total Items Count**, a whole number from 1 to 999999. It appears in customer and admin order lists and summaries, plus the customer dashboard’s recent orders. Migration `0009_order_item_count.sql` adds the field; existing orders display “Not recorded” because their historical counts are unknown.
+
+The authenticated maintenance endpoint also accepts `?verify=1` for a live Blob upload/read/delete check using a temporary synthetic PNG. It uses the same server adapter as customer photos, returns `storageVerified: true` only after a successful round trip and deletion, and queues recovery if cleanup fails. It does not create a customer order or image record.

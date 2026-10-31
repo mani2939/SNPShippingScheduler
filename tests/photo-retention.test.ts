@@ -6,7 +6,7 @@ import { PGlite } from "@electric-sql/pglite";
 import type { CustomerDB } from "../lib/customer-store.ts";
 import type { PhotoBlobStorage } from "../lib/photo-blob.ts";
 import { addOrderPhoto, orderPhotos, readOrderPhoto } from "../lib/order-photos.ts";
-import { authorizedPhotoCleanup, cleanupOrderPhotos, migrateLegacyOrderPhotos, purgeQueuedPhotoBlobs } from "../lib/photo-retention.ts";
+import { authorizedPhotoCleanup, cleanupOrderPhotos, migrateLegacyOrderPhotos, purgeQueuedPhotoBlobs, verifyPhotoBlobStorage } from "../lib/photo-retention.ts";
 const png=Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5N8AAAAASUVORK5CYII=","base64");
 async function fixture() {
   const pg=new PGlite();
@@ -129,5 +129,19 @@ test("failed legacy migration preserves original bytes and maintenance backfills
     await f.db.query("UPDATE photo_blob_deletions SET not_before=now()-interval '1 second'");
     assert.equal(await purgeQueuedPhotoBlobs(f.db,f.storage),1,"remove only the orphan from the failed migration");
     assert.ok(f.blobs.has(path),"referenced photos are protected even if an intent remains queued");
+  }finally{await f.pg.close();}
+});
+
+test("live Blob verification round-trips synthetic bytes and cleans up on success and read failure",async()=>{
+  const f=await fixture();try {
+    assert.equal(await verifyPhotoBlobStorage(f.db,f.storage),true);
+    assert.equal(f.blobs.size,0);
+    assert.equal((await f.db.query("SELECT * FROM photo_blob_deletions")).rows.length,0);
+    const broken={...f.storage,async read(){return null;}};
+    await assert.rejects(()=>verifyPhotoBlobStorage(f.db,broken),/verification failed/);
+    assert.equal(f.blobs.size,0);
+    f.state.failRemove=true;
+    await assert.rejects(()=>verifyPhotoBlobStorage(f.db,f.storage),/unavailable/);
+    assert.equal((await f.db.query("SELECT * FROM photo_blob_deletions")).rows.length,1);
   }finally{await f.pg.close();}
 });
