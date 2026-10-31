@@ -45,6 +45,7 @@ export default function AdminPage() {
   const [orderTotal, setOrderTotal] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
+  const [customerPage, setCustomerPage] = useState(1);
   const [customerDeleteId, setCustomerDeleteId] = useState<string | null>(null);
   const [deletionConfirm, setDeletionConfirm] = useState<Record<string, string>>({});
   const [customerFilter, setCustomerFilter] = useState<"all" | "verified" | "unverified">("all");
@@ -144,6 +145,19 @@ export default function AdminPage() {
     const matchesFilter = customerFilter === "all" || customer.email_verified === (customerFilter === "verified");
     return matchesSearch && matchesFilter;
   }) || [];
+  const customerPageSize = 25;
+  const customerPageCount = Math.max(1, Math.ceil(shownCustomers.length / customerPageSize));
+  const currentCustomerPage = Math.min(customerPage, customerPageCount);
+  const customerPageStart = (currentCustomerPage - 1) * customerPageSize;
+  const paginatedCustomers = shownCustomers.slice(customerPageStart, customerPageStart + customerPageSize);
+  function showCustomers(group: "all" | "verified" | "unverified") {
+    setTab("customers");
+    setCustomerFilter(group);
+    setCustomerPage(1);
+    setCustomerDeleteId(null);
+    setDeletionConfirm({});
+  }
+  const customerGroupLabel = customerFilter === "all" ? "Registered customers" : customerFilter === "verified" ? "Verified customers" : "Non-Verified customers";
   const urgentCount = data?.urgentRequests.filter(r => r.status === "pending").length || 0;
   const gdprCount = data?.gdprRequests.filter(r => r.status === "pending").length || 0;
   return (
@@ -216,7 +230,14 @@ export default function AdminPage() {
                 </div>
                 <div className="admin-side-group">
                   <span className="admin-side-label">PEOPLE & PRIVACY</span>
-                  <button type="button" aria-pressed={tab === "customers"} onClick={() => setTab("customers")}><Users size={18} /><span>Customers</span><em>{data.customers.length}</em></button>
+                  <button type="button" aria-pressed={tab === "customers"} onClick={() => showCustomers("all")}><Users size={18} /><span>Customers</span><em>{data.customers.length}</em></button>
+                  <div className="admin-booking-subnav" aria-label="Customer verification groups">
+                    {(["verified", "unverified"] as const).map(group => (
+                      <button key={group} type="button" aria-pressed={tab === "customers" && customerFilter === group} onClick={() => showCustomers(group)}>
+                        <span>{group === "verified" ? "Verified" : "Non-Verified"}</span><em>{data.customers.filter(customer => customer.email_verified === (group === "verified")).length}</em>
+                      </button>
+                    ))}
+                  </div>
                   <button type="button" aria-pressed={tab === "gdpr"} onClick={() => setTab("gdpr")}><ShieldCheck size={18} /><span>GDPR requests</span>{gdprCount > 0 && <em className="admin-nav-alert">{gdprCount}</em>}</button>
                 </div>
                 <div className="admin-side-group">
@@ -434,24 +455,18 @@ export default function AdminPage() {
               <section className="panel table-wrap customers-panel">
                 <div className="customers-heading">
                   <div>
-                    <h2>Registered customers</h2>
+                    <h2>{customerGroupLabel}</h2>
                     <p className="muted">Accounts created through customer registration.</p>
                   </div>
-                  <span className="customers-total">{data.customers.length} total</span>
+                  <span className="customers-total">{data.customers.filter(customer => customerFilter === "all" || customer.email_verified === (customerFilter === "verified")).length} total</span>
                 </div>
                 <div className="customers-tools">
                   <label htmlFor="customer-search" className="sr-only">Search customers</label>
-                  <input id="customer-search" type="search" placeholder="Search name or email" value={customerSearch} onChange={e => setCustomerSearch(e.target.value)} />
-                  <label htmlFor="customer-filter" className="sr-only">Filter by verification</label>
-                  <select id="customer-filter" value={customerFilter} onChange={e => setCustomerFilter(e.target.value as "all" | "verified" | "unverified")}>
-                    <option value="all">All accounts</option>
-                    <option value="verified">Verified</option>
-                    <option value="unverified">Unverified</option>
-                  </select>
+                  <input id="customer-search" type="search" placeholder="Search name or email" value={customerSearch} onChange={e => { setCustomerSearch(e.target.value); setCustomerPage(1); setCustomerDeleteId(null); setDeletionConfirm({}); }} />
                 </div>
                 <table>
                   <thead><tr><th>Customer</th><th>Email</th><th>Joined</th><th>Verification</th><th>Bookings</th><th>Action</th></tr></thead>
-                  <tbody>{shownCustomers.map(customer => (
+                  <tbody>{paginatedCustomers.map(customer => (
                     <Fragment key={customer.id}>
                     <tr>
                       <td><strong>{customer.name}</strong></td>
@@ -470,6 +485,14 @@ export default function AdminPage() {
                     </Fragment>
                   ))}</tbody>
                 </table>
+                <nav className="history-pagination customers-pagination" aria-label="Customer pagination">
+                  <span role="status">{shownCustomers.length === 0 ? "0 customers" : `${customerPageStart + 1}–${Math.min(customerPageStart + customerPageSize, shownCustomers.length)} of ${shownCustomers.length} customers`}</span>
+                  <div className="action-row">
+                    <button type="button" className="secondary" disabled={currentCustomerPage === 1} onClick={() => { setCustomerPage(currentCustomerPage - 1); setCustomerDeleteId(null); setDeletionConfirm({}); }}>Previous</button>
+                    <span>Page {currentCustomerPage} of {customerPageCount}</span>
+                    <button type="button" className="secondary" disabled={currentCustomerPage === customerPageCount} onClick={() => { setCustomerPage(currentCustomerPage + 1); setCustomerDeleteId(null); setDeletionConfirm({}); }}>Next</button>
+                  </div>
+                </nav>
                 {shownCustomers.length === 0 && <div className="empty">{data.customers.length === 0 ? "No customers have registered yet." : "No customers match this search."}</div>}
               </section>
             )}
