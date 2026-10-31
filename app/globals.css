@@ -1487,3 +1487,14 @@ h1, h2, h3 { font-weight: 500; color: var(--ink); }
 
 .customers-pagination { padding: 0 24px 24px; }
 .customers-pagination .action-row { flex-wrap: wrap; }
+
+.customer-autocomplete { position: relative; min-width: 0; }
+.customer-autocomplete-control { position: relative; }
+.customer-suggestions { position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; right: 0; background: #fff; border: 1px solid #d8d6cf; border-radius: 10px; box-shadow: 0 8px 24px #0002; overflow: hidden; }
+.customer-suggestions ul { list-style: none; margin: 0; padding: 4px; max-height: 280px; overflow-y: auto; }
+.customer-suggestions li { cursor: pointer; padding: 10px 12px; border-radius: 6px; overflow-wrap: anywhere; }
+.customer-suggestions li:hover, .customer-suggestions li.is-active { background: #f0eee7; }
+.customer-suggestions li strong, .customer-suggestions li span { display: block; }
+.customer-suggestions li span { color: var(--muted); font-size: 12px; margin-top: 3px; }
+.customer-suggestions p { padding: 10px 14px; margin: 0; font-size: 12px; color: var(--muted); border-top: 1px solid #eee; }
+.customer-autocomplete-help { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
