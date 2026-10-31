@@ -12,6 +12,6 @@ export async function GET(_request: Request, context: {params:Promise<{orderId:s
     if (![orderId,photoId].every(id=>/^[0-9a-f-]{36}$/i.test(id))) return new Response(null,{status:404,headers});
     const photo = await readOrderPhoto(pool(),orderId,photoId,customer?.id || null);
     if (!photo) return new Response(null,{status:404,headers});
-    return new Response(new Uint8Array(photo.image),{headers:{...headers,"Content-Type":photo.content_type,"Content-Disposition":"inline"}});
+    return new Response(photo.stream,{headers:{...headers,"Content-Type":photo.content_type,"Content-Disposition":"inline"}});
   } catch { return new Response(null,{status:503,headers}); }
 }

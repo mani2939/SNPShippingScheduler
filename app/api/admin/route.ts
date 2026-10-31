@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { purgeQueuedPhotoBlobs } from "../../../lib/photo-retention";
 import { createOrder } from "../../../lib/orders";
 import { deleteCustomerByAdmin, eraseCustomer, sendAccountDeletionConfirmation } from "../../../lib/gdpr-erasure";
 import { decideUrgentRequest, sendUrgentRejection } from "../../../lib/urgent";
@@ -163,10 +165,18 @@ export async function POST(request: NextRequest) {
       });
     } else if (input.action === "gdpr_delete") {
       const erased = await transaction(db => eraseCustomer(db, input.id));
+      after(async () => {
+        try { await purgeQueuedPhotoBlobs(pool()); }
+        catch { console.error("Account photo deletion remains queued for retry."); }
+      });
       const emailStatus = await sendAccountDeletionConfirmation(erased.email, erased.name, input.id);
       return NextResponse.json({ ok: true, deletedBookings: erased.bookingCount, emailStatus, contactEmail: emailStatus === "sent" ? null : erased.email });
     } else if (input.action === "customer_delete") {
       const erased = await transaction(db => deleteCustomerByAdmin(db, input.id));
+      after(async () => {
+        try { await purgeQueuedPhotoBlobs(pool()); }
+        catch { console.error("Account photo deletion remains queued for retry."); }
+      });
       const emailStatus = await sendAccountDeletionConfirmation(erased.email, erased.name, input.id);
       return NextResponse.json({ ok: true, deletedBookings: erased.bookingCount, emailStatus, contactEmail: emailStatus === "sent" ? null : erased.email });
     } else if (input.action === "urgent_approve" || input.action === "urgent_reject") {

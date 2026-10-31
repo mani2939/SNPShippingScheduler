@@ -24,7 +24,7 @@ export async function POST(request: NextRequest, context: Context) {
     const form = await boundedFormData(request); const photo = form.get("photo");
     if (!(photo instanceof File)) throw Error("Choose a photo to upload.");
     const photoBytes = await photo.arrayBuffer();
-    await transaction(db=>addOrderPhoto(db,orderId,photo.name,new Uint8Array(photoBytes)));
+    await addOrderPhoto(pool(),transaction,orderId,photo.name,new Uint8Array(photoBytes));
     return NextResponse.json({ok:true},{headers});
   } catch(e) {
     const message = e instanceof Error ? e.message : "";
