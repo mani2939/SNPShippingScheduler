@@ -8,7 +8,7 @@ import { bookingStatuses, activeBookingStatuses, type BookingStatus } from "../.
 import { trackingURL } from "../../lib/tracking";
 import { Fragment, useEffect, useState } from "react";
 import { Package, ArrowUpRight, LogOut, RefreshCw, ClipboardList, Zap, Users, ShieldCheck, CalendarDays, Settings2, CheckCircle2 } from "lucide-react";
-import { dateLabel, type Settings } from "../../lib/schedule";
+import { bookingSlotLabel, dateLabel, type Settings } from "../../lib/schedule";
 type BookingFilter = "all" | "confirmed" | "in_progress" | "completed";
 type Booking = {
   id: string;
@@ -309,7 +309,7 @@ export default function AdminPage() {
                           </td>
                           <td>
                             {dateLabel(b.dispatch_date)}
-                            <small>Slot {b.slot.slice(-1)}</small>
+                            <small>{bookingSlotLabel(b.slot)}</small>
                           </td>
                           <td>
                             <span className={"badge " + b.status}>
@@ -419,7 +419,7 @@ export default function AdminPage() {
             {tab === "urgent" && (
               <section className="panel table-wrap">
                 <h2>Urgent requests</h2>
-                <p className="muted">Review each request and choose a dispatch date. Approval creates a Confirmed booking; rejection emails the customer.</p>
+                <p className="muted">Review each request and choose a dispatch date. Approval creates a Confirmed booking. If the date is full, an extra place is added for this urgent request only. Rejection emails the customer.</p>
                 <table>
                   <thead><tr><th>Customer</th><th>Request</th><th>Status</th><th>Decision</th></tr></thead>
                   <tbody>{data.urgentRequests.map(u => (

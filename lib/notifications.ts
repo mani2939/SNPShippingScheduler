@@ -1,5 +1,5 @@
 import { pool } from "./db";
-import { dateLabel } from "./schedule";
+import { bookingSlotLabel, dateLabel } from "./schedule";
 export function connections() {
   return {
     email: !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM),
@@ -35,7 +35,7 @@ export async function sendNotifications(bookingId: string) {
     let accepted = false;
     try {
       let response: Response;
-      const label = "Slot " + b.slot.slice(-1);
+      const label = bookingSlotLabel(b.slot);
       if (channel === "email") {
         response = await fetch("https://api.resend.com/emails", {
           method: "POST",

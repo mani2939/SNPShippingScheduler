@@ -203,3 +203,11 @@ $$;
 DROP TRIGGER IF EXISTS order_photos_queue_blob_deletion ON order_photos;
 CREATE TRIGGER order_photos_queue_blob_deletion AFTER DELETE ON order_photos
  FOR EACH ROW EXECUTE FUNCTION queue_deleted_photo_blob();
+
+-- Additional places exist only on an urgent booking; normal slots stay fixed.
+ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_slot_check;
+ALTER TABLE bookings ADD CONSTRAINT bookings_slot_check CHECK (
+ slot IN ('slot-1','slot-2','slot-3')
+ OR (urgent AND slot ~ '^urgent-[1-9][0-9]*$')
+);
+-- Keep the existing unique (dispatch_date,slot) index for all active places.

@@ -102,3 +102,7 @@ export function nextAvailableSlot(
 ) {
   return settings.slots.find((s) => !occupied.some((o) => o.slot === s.id))?.id;
 }
+
+export function bookingSlotLabel(slot: string) {
+  return slot.startsWith("urgent-") ? `Urgent extra place ${slot.slice(7)}` : `Slot ${slot.slice(5)}`;
+}
