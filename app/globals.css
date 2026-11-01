@@ -1498,3 +1498,16 @@ h1, h2, h3 { font-weight: 500; color: var(--ink); }
 .customer-suggestions li span { color: var(--muted); font-size: 12px; margin-top: 3px; }
 .customer-suggestions p { padding: 10px 14px; margin: 0; font-size: 12px; color: var(--muted); border-top: 1px solid #eee; }
 .customer-autocomplete-help { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+
+.booking-weeks { display: grid; gap: 16px; }
+.booking-week { min-width: 0; }
+.booking-week > summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px; cursor: pointer; list-style: none; border-radius: 15px; }
+.booking-week > summary::-webkit-details-marker { display: none; }
+.booking-week > summary:hover { background: #f7f6f1; }
+.booking-week > summary:focus-visible { outline: 2px solid #687059; outline-offset: 3px; }
+.booking-week > summary strong { font-size: 16px; }
+.booking-week > summary small { display: block; color: var(--muted); margin-top: 4px; }
+.booking-week-count { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.booking-week[open] > summary { border-bottom: 1px solid var(--line); border-radius: 15px 15px 0 0; }
+.booking-week[open] > summary svg { transform: rotate(180deg); }
+@media (max-width: 639px) { .booking-week > summary { padding: 16px; gap: 10px; } .booking-week > summary strong { font-size: 14px; } }

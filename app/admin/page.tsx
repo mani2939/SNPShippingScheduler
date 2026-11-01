@@ -1,4 +1,5 @@
 "use client";
+import { groupBookingsByWeek } from "../../lib/booking-weeks";
 import CustomerAutocomplete from "../customer-autocomplete";
 import { OrderList, money } from "../orders";
 import type { Order } from "../../lib/orders";
@@ -7,7 +8,7 @@ import Brand from "../brand";
 import { bookingStatuses, activeBookingStatuses, type BookingStatus } from "../../lib/booking-status";
 import { trackingURL } from "../../lib/tracking";
 import { Fragment, useEffect, useState } from "react";
-import { Package, ArrowUpRight, LogOut, RefreshCw, ClipboardList, Zap, Users, ShieldCheck, CalendarDays, Settings2, CheckCircle2 } from "lucide-react";
+import { Package, ArrowUpRight, LogOut, RefreshCw, ClipboardList, Zap, Users, ShieldCheck, CalendarDays, Settings2, CheckCircle2, ChevronDown } from "lucide-react";
 import { bookingSlotLabel, dateLabel, type Settings } from "../../lib/schedule";
 type BookingFilter = "all" | "confirmed" | "in_progress" | "completed";
 type Booking = {
@@ -112,6 +113,122 @@ export default function AdminPage() {
     } finally {
       setBusy(false);
     }
+  }
+  function renderBookingTable(bookings: Booking[]) {
+    return (
+      <table>
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Dispatch</th>
+            <th>Status</th>
+            <th>Notifications</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {bookings.map((b) => (
+            <tr key={b.id}>
+              <td>
+                <strong>{b.name}</strong>
+                <small>{b.email}</small>
+                <small>{b.reference}</small>
+              </td>
+              <td>
+                {dateLabel(b.dispatch_date)}
+                <small>{bookingSlotLabel(b.slot)}</small>
+              </td>
+              <td>
+                <span className={"badge " + b.status}>
+                  {bookingStatuses[b.status]}
+                </span>
+                {b.royal_mail_tracking && (
+                  <small>
+                    <a
+                      className="tracking-link"
+                      href={trackingURL(b.royal_mail_tracking)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Royal Mail: {b.royal_mail_tracking}
+                    </a>
+                  </small>
+                )}
+              </td>
+              <td>
+                {["email", "whatsapp"].map((c) => (
+                  <small
+                    title={b.notifications[c]?.error || ""}
+                    key={c}
+                  >
+                    {c === "email" ? "Email" : "WhatsApp"}:{" "}
+                    {b.notifications[c]?.status || "pending"}
+                  </small>
+                ))}
+              </td>
+              <td>
+                <div className="admin-table-actions">
+                  {b.status !== "cancelled" && (
+                    <form className="tracking-form" onSubmit={e => {
+                      e.preventDefault();
+                      void act({ action: "tracking", id: b.id, tracking: tracking[b.id] ?? b.royal_mail_tracking ?? "" }, "Royal Mail tracking saved.");
+                    }}>
+                      <label htmlFor={`tracking-${b.id}`}>Royal Mail tracking number</label>
+                      <input id={`tracking-${b.id}`} required maxLength={100} disabled={busy} value={tracking[b.id] ?? b.royal_mail_tracking ?? ""} onChange={e => setTracking(v => ({ ...v, [b.id]: e.target.value }))} placeholder="e.g. AB123456789GB" />
+                      <button className="secondary" disabled={busy}>Save tracking</button>
+                    </form>
+                  )}
+                  {activeBookingStatuses.includes(b.status) && (
+                    <form className="tracking-form" onSubmit={e => {
+                      e.preventDefault();
+                      const status = statusDraft[b.id] ?? b.status;
+                      if (status === "cancelled" && !confirm("Cancel this booking and release its slot? Tell the customer directly; no cancellation email is sent.")) return;
+                      const number = tracking[b.id] ?? b.royal_mail_tracking;
+                      void act(
+                        { action: "status", id: b.id, status,
+                          ...(["shipped", "completed"].includes(status) && number ? { tracking: number } : {}) },
+                        status === "shipped" ? "Marked Completed and Royal Mail tracking saved." : "Booking status updated.",
+                      );
+                    }}>
+                      <label htmlFor={`status-${b.id}`}>Booking status</label>
+                      <select id={`status-${b.id}`} value={statusDraft[b.id] ?? b.status} disabled={busy} onChange={e => setStatusDraft(v => ({ ...v, [b.id]: e.target.value as BookingStatus }))}>
+                        {Object.entries(bookingStatuses)
+                          .filter(([status]) => b.status === "shipped"
+                            ? ["shipped", "completed", "cancelled"].includes(status)
+                            : true)
+                          .map(([status, label]) => (
+                            <option key={status} value={status}>
+                              {status === "shipped" && b.status !== "shipped" ? "Shipped → Completed" : label}
+                            </option>
+                          ))}
+                      </select>
+                      <button className="secondary" disabled={busy}>Update status</button>
+                    </form>
+                  )}
+                  {b.status !== "cancelled" &&
+                    Object.values(b.notifications).some((n) =>
+                      ["failed", "pending"].includes(n.status),
+                    ) && (
+                      <button
+                        className="secondary"
+                        disabled={busy || data?.demo}
+                        onClick={() =>
+                          void act(
+                            { action: "retry", id: b.id },
+                            "Notification attempt completed. Check the status below.",
+                          )
+                        }
+                      >
+                        Retry alerts
+                      </button>
+                    )}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
   }
   const stageCount = (stage: BookingFilter) => data?.bookings.filter((booking) =>
     stage === "all" || (stage === "in_progress"
@@ -288,119 +405,16 @@ export default function AdminPage() {
                   <div><h2>{stageLabel[filter]}</h2><p>{shown.length} {shown.length === 1 ? "booking" : "bookings"} in this view</p></div>
                   <button type="button" className="secondary booking-all-button" onClick={() => showBookings(filter === "all" ? "confirmed" : "all")}>{filter === "all" ? "Show confirmed" : `View all bookings · ${stageCount("all")}`}</button>
                 </div>
-                <section className="panel table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Customer</th>
-                        <th>Dispatch</th>
-                        <th>Status</th>
-                        <th>Notifications</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {shown.map((b) => (
-                        <tr key={b.id}>
-                          <td>
-                            <strong>{b.name}</strong>
-                            <small>{b.email}</small>
-                            <small>{b.reference}</small>
-                          </td>
-                          <td>
-                            {dateLabel(b.dispatch_date)}
-                            <small>{bookingSlotLabel(b.slot)}</small>
-                          </td>
-                          <td>
-                            <span className={"badge " + b.status}>
-                              {bookingStatuses[b.status]}
-                            </span>
-                            {b.royal_mail_tracking && (
-                              <small>
-                                <a
-                                  className="tracking-link"
-                                  href={trackingURL(b.royal_mail_tracking)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  Royal Mail: {b.royal_mail_tracking}
-                                </a>
-                              </small>
-                            )}
-                          </td>
-                          <td>
-                            {["email", "whatsapp"].map((c) => (
-                              <small
-                                title={b.notifications[c]?.error || ""}
-                                key={c}
-                              >
-                                {c === "email" ? "Email" : "WhatsApp"}:{" "}
-                                {b.notifications[c]?.status || "pending"}
-                              </small>
-                            ))}
-                          </td>
-                          <td>
-                            <div className="admin-table-actions">
-                              {b.status !== "cancelled" && (
-                                <form className="tracking-form" onSubmit={e => {
-                                  e.preventDefault();
-                                  void act({ action: "tracking", id: b.id, tracking: tracking[b.id] ?? b.royal_mail_tracking ?? "" }, "Royal Mail tracking saved.");
-                                }}>
-                                  <label htmlFor={`tracking-${b.id}`}>Royal Mail tracking number</label>
-                                  <input id={`tracking-${b.id}`} required maxLength={100} disabled={busy} value={tracking[b.id] ?? b.royal_mail_tracking ?? ""} onChange={e => setTracking(v => ({ ...v, [b.id]: e.target.value }))} placeholder="e.g. AB123456789GB" />
-                                  <button className="secondary" disabled={busy}>Save tracking</button>
-                                </form>
-                              )}
-                              {activeBookingStatuses.includes(b.status) && (
-                                <form className="tracking-form" onSubmit={e => {
-                                  e.preventDefault();
-                                  const status = statusDraft[b.id] ?? b.status;
-                                  if (status === "cancelled" && !confirm("Cancel this booking and release its slot? Tell the customer directly; no cancellation email is sent.")) return;
-                                  const number = tracking[b.id] ?? b.royal_mail_tracking;
-                                  void act(
-                                    { action: "status", id: b.id, status,
-                                      ...(["shipped", "completed"].includes(status) && number ? { tracking: number } : {}) },
-                                    status === "shipped" ? "Marked Completed and Royal Mail tracking saved." : "Booking status updated.",
-                                  );
-                                }}>
-                                  <label htmlFor={`status-${b.id}`}>Booking status</label>
-                                  <select id={`status-${b.id}`} value={statusDraft[b.id] ?? b.status} disabled={busy} onChange={e => setStatusDraft(v => ({ ...v, [b.id]: e.target.value as BookingStatus }))}>
-                                    {Object.entries(bookingStatuses)
-                                      .filter(([status]) => b.status === "shipped"
-                                        ? ["shipped", "completed", "cancelled"].includes(status)
-                                        : true)
-                                      .map(([status, label]) => (
-                                        <option key={status} value={status}>
-                                          {status === "shipped" && b.status !== "shipped" ? "Shipped → Completed" : label}
-                                        </option>
-                                      ))}
-                                  </select>
-                                  <button className="secondary" disabled={busy}>Update status</button>
-                                </form>
-                              )}
-                              {b.status !== "cancelled" &&
-                                Object.values(b.notifications).some((n) =>
-                                  ["failed", "pending"].includes(n.status),
-                                ) && (
-                                  <button
-                                    className="secondary"
-                                    disabled={busy || data.demo}
-                                    onClick={() =>
-                                      void act(
-                                        { action: "retry", id: b.id },
-                                        "Notification attempt completed. Check the status below.",
-                                      )
-                                    }
-                                  >
-                                    Retry alerts
-                                  </button>
-                                )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <section className={filter === "confirmed" && shown.length > 0 ? "booking-weeks" : "panel table-wrap"}>
+                  {filter === "confirmed" && shown.length > 0 ? groupBookingsByWeek(shown).map((week, index) => (
+                    <details className="panel booking-week" key={week.start} open={index === 0}>
+                      <summary>
+                        <span><strong>{week.label}</strong><small>{week.year}</small></span>
+                        <span className="booking-week-count">{week.bookings.length} {week.bookings.length === 1 ? "booking" : "bookings"}<ChevronDown size={18} aria-hidden="true" /></span>
+                      </summary>
+                      <div className="table-wrap">{renderBookingTable(week.bookings)}</div>
+                    </details>
+                  )) : renderBookingTable(shown)}
                   <details className="admin-delivery-help"><summary>Notification delivery help</summary><p>“Sent” means the provider accepted the notification. For an unknown result, check the provider’s delivery log before resending. Up to 500 recent bookings are shown.</p></details>
                   {shown.length === 0 && (
                     <div className="empty">
