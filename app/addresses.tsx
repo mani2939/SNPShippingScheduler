@@ -87,9 +87,9 @@ export default function CustomerAddresses() {
       if (input instanceof HTMLInputElement) input.value = value;
     }
     setSuggestions([]);
-    setLookupMessage("Address filled in. Check the details and add the recipient name.");
-    const recipient = addressForm.current?.elements.namedItem("recipient");
-    if (recipient instanceof HTMLInputElement) recipient.focus();
+    setLookupMessage("Address filled in. Check the details before saving.");
+    const line1 = addressForm.current?.elements.namedItem("line1");
+    if (line1 instanceof HTMLInputElement) line1.focus();
   }
 
   async function add(event: FormEvent<HTMLFormElement>) {
@@ -142,7 +142,7 @@ export default function CustomerAddresses() {
       <form ref={addressForm} className="panel order-create" onSubmit={add}>
         <h2>Add an address</h2>
         <div className="address-fields">
-          {addressFields.map(({ key, label, autoComplete, required }) => <div key={key}>
+          {addressFields.filter(({ key }) => key !== "recipient").map(({ key, label, autoComplete, required }) => <div key={key}>
             <label htmlFor={`address-${key}`}>{label}</label>
             <input id={`address-${key}`} name={key} autoComplete={autoComplete} maxLength={150}
               required={required} disabled={busy} readOnly={key === "country"} defaultValue={key === "country" ? "United Kingdom" : undefined} />

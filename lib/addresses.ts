@@ -14,7 +14,7 @@ export async function customerAddresses(db: CustomerDB, customerId: string): Pro
 // The caller runs this in a transaction. The customer lock serializes default changes.
 export async function saveCustomerAddress(db: CustomerDB, customerId: string, input: Record<string, unknown>) {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw Error("Choose an address action.");
-  const customer = await db.query("SELECT id FROM customers WHERE id=$1 FOR UPDATE", [customerId]);
+  const customer = await db.query("SELECT name FROM customers WHERE id=$1 FOR UPDATE", [customerId]);
   if (!customer.rows.length) throw Error("Customer account not found.");
 
   if (input.action === "default") {
@@ -29,8 +29,9 @@ export async function saveCustomerAddress(db: CustomerDB, customerId: string, in
       await db.query("UPDATE customer_addresses SET is_default=true WHERE customer_id=$1 AND id=$2", [customerId, input.id]);
     }
   } else if (input.action === "add") {
-    const address = {} as Address;
+    const address = { recipient: customer.rows[0].name } as Address;
     for (const field of addressFields) {
+      if (field.key === "recipient") continue;
       const raw = input[field.key];
       const value = typeof raw === "string" ? raw.trim() : "";
       if ((field.required && !value) || value.length > 150 || /[\u0000-\u001f\u007f]/.test(value)) {

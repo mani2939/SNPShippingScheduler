@@ -18,9 +18,10 @@ test("orders validate pennies, enforce shipping, isolate ownership and cascade d
  assert.throws(()=>validateOrder({customerId:owner,date:"2026-02-30",total:"4",itemCount:"1"}));
  for(let i=0;i<22;i++) await createOrder(db,{customerId:owner,date:"2026-10-28",total:"22.99",itemCount:"3"});
  await createOrder(db,{customerId:other,date:"2026-10-29",total:"4",itemCount:"1"});
- const address = { action: "add", recipient: "Customer", line1: "1 Example Street", city: "Sheffield", postcode: "s12hh", country: "United Kingdom" };
+ const address = { action: "add", line1: "1 Example Street", city: "Sheffield", postcode: "s12hh", country: "United Kingdom" };
  const [original] = await saveCustomerAddress(db, owner, address);
  assert.equal(original.is_default, true);
+ assert.equal(original.address.recipient, "Customer");
  assert.equal(original.address.postcode, "S1 2HH");
  await assert.rejects(saveCustomerAddress(db, owner, { ...address, postcode: "90210" }), /UK postcode/);
  const orderInput = { customerId: owner, date: "2026-10-29", total: "4", itemCount: "1" };
