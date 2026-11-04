@@ -1,4 +1,5 @@
 "use client";
+import { AddressBlock } from "./addresses";
 import OrderPhotos from "./order-photos";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Package, Receipt, RefreshCw } from "lucide-react";
@@ -13,6 +14,9 @@ export function OrderList({ orders, admin = false }: { orders: Order[]; admin?: 
     <div className="order-title"><h2>Order #{order.number}</h2><span className="badge">Recorded</span></div>
     <p className="muted">{orderDate(order.order_date)}</p>
     <div className="order-detail-grid"><section className="panel order-summary"><h3><Receipt size={19}/> Order summary</h3><dl><div><dt>Total Items Count</dt><dd>{order.item_count ?? "Not recorded"}</dd></div><div><dt>Subtotal</dt><dd>{money(order.total_pence-order.shipping_pence)}</dd></div><div><dt>Standard shipping</dt><dd>{money(order.shipping_pence)}</dd></div><div className="order-grand-total"><dt>Total</dt><dd>{money(order.total_pence)}</dd></div></dl></section><section className="panel order-summary"><h3><Package size={19}/> Order information</h3>{order.name && <p><strong>{order.name}</strong><br/>{order.email}</p>}<p>Order date: {orderDate(order.order_date)}</p><p className="muted">Added by SNP Dispatch.</p></section></div>
+    <section className="panel order-summary order-address"><h3>Shipping address</h3>
+      {order.shipping_address ? <AddressBlock address={order.shipping_address}/> : <p className="muted">No shipping address was saved for this order.</p>}
+    </section>
     <OrderPhotos key={order.id} orderId={order.id} admin={admin}/>
   </div>;
   return <section className="panel table-wrap orders-list"><table><thead><tr><th>Order</th><th>Date</th>{orders.some(o=>o.name) && <th>Customer</th>}<th>Total Items Count</th><th>Shipping</th><th>Total</th><th></th></tr></thead><tbody>{orders.map(o=><tr key={o.id}><td><button className="order-number" onClick={()=>setSelected(o.id)}>#{o.number}</button></td><td>{orderDate(o.order_date)}</td>{orders.some(o=>o.name) && <td><strong>{o.name}</strong><small>{o.email}</small></td>}<td>{o.item_count ?? "Not recorded"}</td><td>{money(o.shipping_pence)}</td><td><strong>{money(o.total_pence)}</strong></td><td><button className="secondary" onClick={()=>setSelected(o.id)} aria-label={`View order ${o.number}`}>View order</button></td></tr>)}</tbody></table>{!orders.length && <div className="empty"><Package size={28}/><h3>No orders yet</h3><p>Orders added by SNP Dispatch will appear here.</p></div>}</section>;
