@@ -1520,3 +1520,15 @@ h1, h2, h3 { font-weight: 500; color: var(--ink); }
 
 .customer-cancel-dispatch { margin-top: 12px; }
 .customer-cancel-dispatch p { margin: 8px 0 0; }
+
+.admin-booking-metrics .booking-delayed-tab,
+.admin-side-nav .booking-delayed-tab { border: 2px solid #bf3434; }
+.admin-booking-metrics .booking-delayed-tab:hover,
+.admin-booking-metrics .booking-delayed-tab[aria-pressed="true"],
+.admin-side-nav .booking-delayed-tab[aria-pressed="true"] { border-color: #a51f1f; box-shadow: 0 0 0 2px rgb(191 52 52 / 14%); }
+.admin-booking-metrics .booking-delayed-tab[aria-pressed="true"] { background: #fff6f6; }
+.admin-booking-metrics .booking-delayed-tab .admin-metric-top,
+.admin-booking-metrics .booking-delayed-tab .admin-metric-top svg,
+.admin-booking-metrics .booking-delayed-tab strong { color: #a51f1f; }
+@media (min-width: 1101px) { .admin-booking-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 640px) and (max-width: 1100px) { .admin-booking-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

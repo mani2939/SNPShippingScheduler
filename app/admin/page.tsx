@@ -5,18 +5,19 @@ import { OrderList, money } from "../orders";
 import type { Order } from "../../lib/orders";
 import Link from "next/link";
 import Brand from "../brand";
-import { bookingStatuses, activeBookingStatuses, type BookingStatus } from "../../lib/booking-status";
+import { bookingStatuses, activeBookingStatuses, matchesAdminBookingFilter, type AdminBookingFilter, type BookingStatus } from "../../lib/booking-status";
 import { trackingURL } from "../../lib/tracking";
 import { Fragment, useEffect, useState } from "react";
-import { Package, ArrowUpRight, LogOut, RefreshCw, ClipboardList, Zap, Users, ShieldCheck, CalendarDays, Settings2, CheckCircle2, ChevronDown } from "lucide-react";
-import { bookingSlotLabel, dateLabel, type Settings } from "../../lib/schedule";
-type BookingFilter = "all" | "confirmed" | "in_progress" | "completed";
+import { Package, ArrowUpRight, LogOut, RefreshCw, ClipboardList, Zap, Users, ShieldCheck, CalendarDays, Settings2, CheckCircle2, ChevronDown, AlertTriangle } from "lucide-react";
+import { bookingSlotLabel, dateLabel, today, type Settings } from "../../lib/schedule";
+type BookingFilter = AdminBookingFilter;
 type Booking = {
   id: string;
   reference: string;
   name: string;
   email: string;
   dispatch_date: string;
+  dispatched_at: string | null;
   slot: string;
   status: BookingStatus;
   royal_mail_tracking: string | null;
@@ -38,6 +39,7 @@ type Data = {
   connections: { email: boolean; whatsapp: boolean };
 };
 export default function AdminPage() {
+  const [currentTime, setCurrentTime] = useState(() => new Date());
   const [statusDraft, setStatusDraft] = useState<Record<string, BookingStatus>>({});
   const [tracking, setTracking] = useState<Record<string, string>>({});
   const [urgentDates, setUrgentDates] = useState<Record<string, string>>({});
@@ -61,6 +63,10 @@ export default function AdminPage() {
     [busy, setBusy] = useState(false),
     [filter, setFilter] = useState<BookingFilter>("confirmed"),
     [settings, setSettings] = useState<Settings | null>(null);
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(new Date()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
   async function load() {
     try {
       const r = await fetch("/api/admin", { cache: "no-store" });
@@ -230,16 +236,12 @@ export default function AdminPage() {
       </table>
     );
   }
-  const stageCount = (stage: BookingFilter) => data?.bookings.filter((booking) =>
-    stage === "all" || (stage === "in_progress"
-      ? booking.status === "being_packed" || booking.status === "shipped"
-      : booking.status === stage)).length || 0;
-  const shown = data?.bookings.filter((booking) => {
-    if (filter === "all") return true;
-    if (filter === "in_progress") return booking.status === "being_packed" || booking.status === "shipped";
-    return booking.status === filter;
-  }) || [];
-  const stageLabel: Record<BookingFilter, string> = { all: "All bookings", confirmed: "Confirmed", in_progress: "In progress", completed: "Completed" };
+  const currentDate = today(data?.settings.timezone || "Europe/London", currentTime);
+  const stageCount = (stage: BookingFilter) =>
+    data?.bookings.filter(booking => matchesAdminBookingFilter(booking, stage, currentDate)).length || 0;
+  const shown = data?.bookings.filter(booking => matchesAdminBookingFilter(booking, filter, currentDate)) || [];
+  const showWeeklyGroups = filter === "confirmed" || filter === "delayed";
+  const stageLabel: Record<BookingFilter, string> = { all: "All bookings", delayed: "Delayed Bookings", confirmed: "Confirmed", in_progress: "In progress", completed: "Completed" };
   function showBookings(stage: BookingFilter) {
     setTab("bookings");
     setFilter(stage);
@@ -337,8 +339,8 @@ export default function AdminPage() {
                   <button aria-pressed={tab === "orders"} onClick={()=>setTab("orders")}><Package size={18}/><span>Orders</span><em>{data.orders.length}</em></button>
                   <button type="button" aria-pressed={tab === "bookings"} onClick={() => showBookings("all")}><ClipboardList size={18} /><span>Bookings</span><em>{data.bookings.length}</em></button>
                   <div className="admin-booking-subnav" aria-label="Booking stages">
-                    {(["confirmed", "in_progress", "completed"] as const).map((stage) => (
-                      <button key={stage} type="button" aria-pressed={tab === "bookings" && filter === stage} onClick={() => showBookings(stage)}>
+                    {(["delayed", "confirmed", "in_progress", "completed"] as const).map((stage) => (
+                      <button key={stage} type="button" className={stage === "delayed" ? "booking-delayed-tab" : undefined} aria-pressed={tab === "bookings" && filter === stage} onClick={() => showBookings(stage)}>
                         <span>{stageLabel[stage]}</span><em>{stageCount(stage)}</em>
                       </button>
                     ))}
@@ -382,7 +384,12 @@ export default function AdminPage() {
               {data.demo && <div className="notice">Admin preview · Connect the database and configure admin sign-in to manage real bookings.</div>}
               {error && <div role="alert" className="error">{error}</div>}
               {message && <div role="status" className="status-message">{message}</div>}
-              {tab === "bookings" && <div className="admin-metrics">
+              {tab === "bookings" && <div className="admin-metrics admin-booking-metrics">
+                <button type="button" className="admin-metric booking-delayed-tab" aria-pressed={filter === "delayed"} onClick={() => showBookings("delayed")}>
+                  <span className="admin-metric-top"><span>Delayed Bookings</span><AlertTriangle size={19} /></span>
+                  <strong>{stageCount("delayed").toString().padStart(2, "0")}</strong>
+                  <small>Past dispatch date · Awaiting dispatch</small>
+                </button>
                 <button type="button" className="admin-metric" aria-pressed={filter === "confirmed"} onClick={() => showBookings("confirmed")}>
                   <span className="admin-metric-top"><span>Confirmed</span><ClipboardList size={19} /></span>
                   <strong>{stageCount("confirmed").toString().padStart(2, "0")}</strong>
@@ -402,11 +409,11 @@ export default function AdminPage() {
             {tab === "bookings" && (
               <>
                 <div className="booking-toolbar">
-                  <div><h2>{stageLabel[filter]}</h2><p>{shown.length} {shown.length === 1 ? "booking" : "bookings"} in this view</p></div>
+                  <div><h2>{stageLabel[filter]}</h2><p>{shown.length} {shown.length === 1 ? "booking" : "bookings"} in this view</p>{filter === "delayed" && <p>Dispatch date has passed and the booking is awaiting dispatch. Dates use {data.settings.timezone}.</p>}</div>
                   <button type="button" className="secondary booking-all-button" onClick={() => showBookings(filter === "all" ? "confirmed" : "all")}>{filter === "all" ? "Show confirmed" : `View all bookings · ${stageCount("all")}`}</button>
                 </div>
-                <section className={filter === "confirmed" && shown.length > 0 ? "booking-weeks" : "panel table-wrap"}>
-                  {filter === "confirmed" && shown.length > 0 ? groupBookingsByWeek(shown).map((week, index) => (
+                <section className={showWeeklyGroups && shown.length > 0 ? "booking-weeks" : "panel table-wrap"}>
+                  {showWeeklyGroups && shown.length > 0 ? groupBookingsByWeek(shown).map((week, index) => (
                     <details className="panel booking-week" key={week.start} open={index === 0}>
                       <summary>
                         <span><strong>{week.label}</strong><small>{week.year}</small></span>
@@ -420,7 +427,7 @@ export default function AdminPage() {
                     <div className="empty">
                       <Package size={32} style={{ marginBottom: 12 }} />
                       <p>
-                        {filter === "all" ? "No bookings yet." : `No ${stageLabel[filter].toLowerCase()} bookings yet.`}
+                        {filter === "all" ? "No bookings yet." : filter === "delayed" ? "No delayed bookings. You’re up to date." : `No ${stageLabel[filter].toLowerCase()} bookings yet.`}
                       </p>
                       <p className="muted">
                         Customer bookings will appear here.
