@@ -8,3 +8,7 @@ export const bookingStatuses = {
 export type BookingStatus = keyof typeof bookingStatuses;
 export const activeBookingStatuses = ["confirmed", "being_packed", "shipped"];
 export const activeBookingMessage = "You already have an active booking or urgent request. Please wait until it is completed, cancelled, or declined.";
+
+export function canCustomerCancelBooking(booking: { status: string; dispatched_at: string | null }) {
+  return booking.status === "confirmed" && booking.dispatched_at === null;
+}

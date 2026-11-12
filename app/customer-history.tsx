@@ -1,12 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
-import { bookingStatuses } from "../lib/booking-status";
+import CancelDispatch from "./cancel-dispatch";
+import { canCustomerCancelBooking, bookingStatuses } from "../lib/booking-status";
 import { trackingURL } from "../lib/tracking";
 import type { CustomerBooking } from "../lib/customer-history";
 export default function CustomerHistory({
   refreshKey,
+  onCancelled,
 }: {
   refreshKey: string;
+  onCancelled?: () => void | Promise<void>;
 }) {
   const [bookings, setBookings] = useState<CustomerBooking[]>([]);
   const [page, setPage] = useState(0);
@@ -69,6 +72,7 @@ export default function CustomerHistory({
           Refresh
         </button>
       </div>
+      <p className="muted">You can cancel a confirmed dispatch before packing starts.</p>
       {loading ? (
         <p role="status">Loading your bookings…</p>
       ) : error ? (
@@ -92,6 +96,7 @@ export default function CustomerHistory({
                   <th scope="col">Booked</th>
                   <th scope="col">Status</th>
                   <th scope="col">Royal Mail tracking</th>
+                  <th scope="col">Manage dispatch</th>
                 </tr>
               </thead>
               <tbody>
@@ -122,6 +127,13 @@ export default function CustomerHistory({
                           <span aria-hidden="true">↗</span>
                         </a>
                       ) : <span className="history-empty">—</span>}
+                    </td>
+                    <td data-label="Manage dispatch">
+                      {canCustomerCancelBooking(booking) ? <CancelDispatch reference={booking.reference}
+                        onCancelled={async () => {
+                          setRetry(value => value + 1);
+                          await onCancelled?.();
+                        }}/> : <span className="history-empty">—</span>}
                     </td>
                   </tr>
                 ))}

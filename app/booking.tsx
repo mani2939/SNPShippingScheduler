@@ -5,6 +5,7 @@ import Brand from "./brand";
 import CustomerDashboard from "./customer-dashboard";
 import CustomerAddresses from "./addresses";
 import CustomerOrders from "./orders";
+import CancelDispatch from "./cancel-dispatch";
 import CustomerHistory from "./customer-history";
 import {
   LayoutDashboard,
@@ -32,6 +33,7 @@ export default function BookingPage({
 }) {
   const { name, email } = customer;
   const [section, setSection] = useState("dashboard");
+  const [activeBookingCancellable, setActiveBookingCancellable] = useState(false);
   const [activeBooking, setActiveBooking] = useState<string | null>(null);
   const [deletionRequested, setDeletionRequested] = useState(false);
   const [latestRejectedUrgent, setLatestRejectedUrgent] = useState<string | null>(null);
@@ -64,6 +66,7 @@ export default function BookingPage({
       const d = await r.json();
       if (!r.ok) throw Error(d.error);
       setActiveBooking(d.activeBooking);
+      setActiveBookingCancellable(d.activeBookingCancellable === true);
       setDeletionRequested(d.deletionRequested);
       setPendingUrgent(d.pendingUrgent);
       setLatestRejectedUrgent(d.latestRejectedUrgent);
@@ -79,6 +82,11 @@ export default function BookingPage({
     } finally {
       setLoading(false);
     }
+  }
+  async function dispatchCancelled() {
+    setReceipt(null);
+    setRequestId(crypto.randomUUID());
+    await load();
   }
   useEffect(() => {
     setRequestId(crypto.randomUUID());
@@ -212,7 +220,7 @@ export default function BookingPage({
           <div className="admin-sidebar-foot"><strong>{name}</strong><br/>{email}</div>
         </aside>
         <div className="customer-workspace">
-        {section === "dashboard" ? <CustomerDashboard name={name} onNavigate={setSection}/> : section === "addresses" ? <CustomerAddresses/> : section === "orders" ? <CustomerOrders/> : section === "history" ? <CustomerHistory refreshKey={receipt?.reference || ""}/> : <>
+        {section === "dashboard" ? <CustomerDashboard name={name} onNavigate={setSection}/> : section === "addresses" ? <CustomerAddresses/> : section === "orders" ? <CustomerOrders/> : section === "history" ? <CustomerHistory refreshKey={receipt?.reference || ""} onCancelled={dispatchCancelled}/> : <>
 
         <div className="eyebrow">SHIPMENT SCHEDULING</div>
         <div className="page-intro">
@@ -260,6 +268,7 @@ export default function BookingPage({
             >
               View booking status <ArrowRight size={18} />
             </button>
+            <CancelDispatch reference={receipt.reference} onCancelled={dispatchCancelled}/>
           </section>
         ) : pendingUrgent ? (
           <section className="panel active-booking" role="status">
@@ -267,9 +276,10 @@ export default function BookingPage({
             <p>Request <strong>{pendingUrgent.reference}</strong> is awaiting admin review. We’ll email you when it is approved with a dispatch date, or if it is declined.</p>
             {pendingUrgent.preferred_date && <p>Requested date: {dateLabel(pendingUrgent.preferred_date)}</p>}
             <button className="secondary" onClick={() => void load()}>Refresh request status</button>
+            <CancelDispatch reference={pendingUrgent.reference} kind="urgent" onCancelled={dispatchCancelled}/>
           </section>
         ) : activeBooking ? (
-          <section className="panel active-booking" role="status"><h2>You have an active booking</h2><p>Booking <strong>{activeBooking}</strong> is in progress. You can book again once SNP Dispatch marks it Completed or Cancelled.</p><a className="tracking-link" href="#booking-history" onClick={()=>setSection("history")}>View your booking and tracking</a><button className="secondary" onClick={() => void load()}>Refresh booking status</button></section>
+          <section className="panel active-booking" role="status"><h2>You have an active booking</h2><p>Booking <strong>{activeBooking}</strong> is in progress. Confirmed dispatches can be cancelled before packing starts.</p><a className="tracking-link" href="#booking-history" onClick={()=>setSection("history")}>View your booking and tracking</a><button className="secondary" onClick={() => void load()}>Refresh booking status</button>{activeBookingCancellable && <CancelDispatch reference={activeBooking} onCancelled={dispatchCancelled}/>}</section>
         ) : (
           <>
           <section className={"panel urgent-dispatch-card" + (urgentMode ? " is-expanded" : "")} aria-labelledby="urgent-dispatch-heading">

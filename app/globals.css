@@ -1517,3 +1517,6 @@ h1, h2, h3 { font-weight: 500; color: var(--ink); }
 .address-list address, .order-address address { line-height: 1.6; overflow-wrap: anywhere; }
 .address-list button { margin-top: 12px; }
 .order-address { margin-top: 16px; }
+
+.customer-cancel-dispatch { margin-top: 12px; }
+.customer-cancel-dispatch p { margin: 8px 0 0; }

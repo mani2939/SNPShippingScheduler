@@ -1,3 +1,4 @@
+import { canCustomerCancelBooking } from "../../../lib/booking-status";
 import { NextResponse } from "next/server";
 import { getCustomer } from "../../../lib/customer-auth";
 import { availability, pool } from "../../../lib/db";
@@ -11,11 +12,12 @@ export async function GET() {
     const rejected = await pool().query("SELECT reference,status FROM urgent_requests WHERE customer_id=$1 ORDER BY created_at DESC LIMIT 1", [customer.id]);
     const deletion = await pool().query("SELECT 1 FROM gdpr_erasure_requests WHERE customer_id=$1 AND status='pending' LIMIT 1", [customer.id]);
     const pending = await pool().query("SELECT reference,preferred_date FROM urgent_requests WHERE customer_id=$1 AND status='pending' ORDER BY created_at DESC LIMIT 1", [customer.id]);
-    const active = await pool().query("SELECT reference FROM bookings WHERE customer_id=$1 AND status IN ('confirmed','being_packed','shipped') ORDER BY created_at DESC LIMIT 1", [customer.id]);
+    const active = await pool().query("SELECT reference,status,dispatched_at FROM bookings WHERE customer_id=$1 AND status IN ('confirmed','being_packed','shipped') ORDER BY created_at DESC LIMIT 1", [customer.id]);
     return NextResponse.json(
       {
         demo: data.demo,
         activeBooking: active.rows[0]?.reference || null,
+        activeBookingCancellable: !!active.rows[0] && canCustomerCancelBooking(active.rows[0]),
         pendingUrgent: pending.rows[0] || null,
         deletionRequested: !!deletion.rowCount,
         latestRejectedUrgent: rejected.rows[0]?.status === "rejected" ? rejected.rows[0].reference : null,

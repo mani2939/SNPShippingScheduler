@@ -22,7 +22,7 @@ type Booking = {
   royal_mail_tracking: string | null;
   notifications: Record<string, { status: string; error: string | null }>;
 };
-type UrgentRequest = { id: string; reference: string; name: string; email: string; reason: string; preferred_date: string | null; assigned_date: string | null; status: "pending" | "approved" | "rejected"; notification_status: string; notification_error: string | null; created_at: string };
+type UrgentRequest = { id: string; reference: string; name: string; email: string; reason: string; preferred_date: string | null; assigned_date: string | null; status: "pending" | "approved" | "rejected" | "cancelled"; notification_status: string; notification_error: string | null; created_at: string };
 type Customer = { id: string; name: string; email: string; email_verified: boolean; created_at: string; booking_count: number; active_count: number };
 type GDPRRequest = { id: string; status: "pending" | "completed"; requested_at: string; completed_at: string | null; name: string | null; email: string | null; booking_count: number; active_count: number };
 type Data = {
@@ -440,7 +440,7 @@ export default function AdminPage() {
                     <tr key={u.id}>
                       <td><strong>{u.name}</strong><small>{u.email}</small><small>{u.reference}</small></td>
                       <td><strong>{u.reason}</strong><small>Requested {new Date(u.created_at).toLocaleString("en-GB")}</small>{u.preferred_date && <small>Preferred: {dateLabel(u.preferred_date)}</small>}</td>
-                      <td><span className={"badge " + (u.status === "approved" ? "confirmed" : u.status === "rejected" ? "cancelled" : "being_packed")}>{u.status === "approved" ? "Confirmed" : u.status === "pending" ? "Pending review" : "Rejected"}</span>{u.assigned_date && <small>Dispatch: {dateLabel(u.assigned_date)}</small>}{u.status === "rejected" && <small title={u.notification_error || ""}>Email: {u.notification_status}</small>}</td>
+                      <td><span className={"badge " + (u.status === "approved" ? "confirmed" : (u.status === "rejected" || u.status === "cancelled") ? "cancelled" : "being_packed")}>{u.status === "approved" ? "Confirmed" : u.status === "pending" ? "Pending review" : u.status === "cancelled" ? "Cancelled" : "Rejected"}</span>{u.assigned_date && <small>Dispatch: {dateLabel(u.assigned_date)}</small>}{u.status === "rejected" && <small title={u.notification_error || ""}>Email: {u.notification_status}</small>}</td>
                       <td>{u.status === "pending" ? (
                         <div className="admin-table-actions urgent-actions">
                           <form className="tracking-form" onSubmit={e => { e.preventDefault(); void act({ action: "urgent_approve", id: u.id, date: urgentDates[u.id] ?? u.preferred_date ?? "" }, "Urgent request approved and booking confirmed."); }}>

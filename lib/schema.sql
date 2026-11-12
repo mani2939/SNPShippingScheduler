@@ -221,3 +221,6 @@ CREATE TABLE IF NOT EXISTS customer_addresses (
 CREATE INDEX IF NOT EXISTS customer_addresses_owner ON customer_addresses(customer_id);
 CREATE UNIQUE INDEX IF NOT EXISTS customer_addresses_default ON customer_addresses(customer_id) WHERE is_default;
 ALTER TABLE customer_orders ADD COLUMN IF NOT EXISTS shipping_address jsonb;
+ALTER TABLE urgent_requests DROP CONSTRAINT IF EXISTS urgent_requests_status_check;
+ALTER TABLE urgent_requests ADD CONSTRAINT urgent_requests_status_check
+ CHECK (status IN ('pending','approved','rejected','cancelled'));
