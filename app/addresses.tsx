@@ -9,9 +9,10 @@ export function AddressBlock({ address }: { address: Address }) {
   </address>;
 }
 
-const endpoint = "/api/customer/addresses";
-
-export default function CustomerAddresses() {
+export default function CustomerAddresses({
+  endpoint = "/api/customer/addresses",
+  admin = false,
+}: { endpoint?: string; admin?: boolean } = {}) {
   const [addresses, setAddresses] = useState<SavedAddress[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -24,14 +25,14 @@ export default function CustomerAddresses() {
         const response = await fetch(endpoint, { signal: controller.signal, cache: "no-store" });
         const data = await response.json();
         if (!response.ok) throw Error(data.error);
-        setAddresses(data.addresses);
+        if (!controller.signal.aborted) setAddresses(data.addresses);
       } catch (error) {
         if (!controller.signal.aborted) setError(error instanceof Error ? error.message : "Could not load addresses.");
       }
     }
     void load();
     return () => controller.abort();
-  }, []);
+  }, [endpoint]);
 
   async function save(input: object, success: string) {
     setBusy(true);
@@ -65,14 +66,14 @@ export default function CustomerAddresses() {
   }
 
   return <>
-    <div className="page-intro">
+    {admin ? <div className="page-intro"><div><h2>Addresses</h2><p>The customer's default address is used when recording a new order.</p></div></div> : <div className="page-intro">
       <div><div className="eyebrow">YOUR ACCOUNT</div><h1>Addresses</h1><p>Your default address is used when SNP Dispatch records a new order.</p></div>
-    </div>
+    </div>}
     {error && <p className="error" role="alert">{error}</p>}
     {message && <p className="status-message" role="status">{message}</p>}
     {addresses === null && !error && <p role="status">Loading addresses…</p>}
     {addresses !== null && <>
-      {addresses.length === 0 && <p>No saved addresses yet. Your first address will become the default.</p>}
+      {addresses.length === 0 && <p>No saved addresses yet. The first address saved becomes the default.</p>}
       <div className="address-list">
         {addresses.map(({ id, address, is_default }) => <section className="panel order-summary" key={id}>
           {is_default && <p><span className="badge confirmed">Default address</span></p>}
@@ -91,7 +92,7 @@ export default function CustomerAddresses() {
               required={required} disabled={busy} readOnly={key === "country"} defaultValue={key === "country" ? "United Kingdom" : undefined} />
           </div>)}
         </div>
-        {addresses.length > 0 && <p><label><input type="checkbox" name="makeDefault" disabled={busy} /> Make this my default address</label></p>}
+        {addresses.length > 0 && <p><label><input type="checkbox" name="makeDefault" disabled={busy} /> Make this the default address</label></p>}
         <button className="primary" disabled={busy}>{busy ? "Saving…" : "Save address"}</button>
       </form>
     </>}

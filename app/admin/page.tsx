@@ -1,5 +1,6 @@
 "use client";
 import { groupBookingsByWeek } from "../../lib/booking-weeks";
+import CustomerDetails from "./customer-details";
 import CustomerAutocomplete from "../customer-autocomplete";
 import { OrderList, money } from "../orders";
 import type { Order } from "../../lib/orders";
@@ -49,6 +50,7 @@ export default function AdminPage() {
   const [orderTotal, setOrderTotal] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
+  const [customerDetailsId, setCustomerDetailsId] = useState<string | null>(null);
   const [customerPage, setCustomerPage] = useState(1);
   const [customerDeleteId, setCustomerDeleteId] = useState<string | null>(null);
   const [deletionConfirm, setDeletionConfirm] = useState<Record<string, string>>({});
@@ -271,6 +273,7 @@ export default function AdminPage() {
   const customerPageStart = (currentCustomerPage - 1) * customerPageSize;
   const paginatedCustomers = shownCustomers.slice(customerPageStart, customerPageStart + customerPageSize);
   function showCustomers(group: "all" | "verified" | "unverified") {
+    setCustomerDetailsId(null);
     setTab("customers");
     setCustomerFilter(group);
     setCustomerPage(1);
@@ -473,7 +476,15 @@ export default function AdminPage() {
               <div className="customers-tools"><label htmlFor="order-search">Find customer orders</label><input id="order-search" type="search" placeholder="Search customer, email or order number" value={orderSearch} onChange={e=>setOrderSearch(e.target.value)}/></div>
               <OrderList admin orders={data.orders.filter(o=>`${o.name} ${o.email} ${o.number}`.toLowerCase().includes(orderSearch.toLowerCase()))}/><p className="muted">Showing up to 500 recent orders.</p>
             </>}
-            {tab === "customers" && (
+            {tab === "customers" && (customerDetailsId ? (
+              <CustomerDetails key={customerDetailsId} customerId={customerDetailsId}
+                onBack={() => setCustomerDetailsId(null)}
+                onOrders={customer => {
+                  setOrderCustomer(customer.id);
+                  setOrderSearch(customer.email);
+                  setTab("orders");
+                }}/>
+            ) : (
               <section className="panel table-wrap customers-panel">
                 <div className="customers-heading">
                   <div>
@@ -491,7 +502,11 @@ export default function AdminPage() {
                   <tbody>{paginatedCustomers.map(customer => (
                     <Fragment key={customer.id}>
                     <tr>
-                      <td><strong>{customer.name}</strong></td>
+                      <td><button type="button" className="order-number" aria-label={`View customer details for ${customer.name}`} onClick={() => {
+                        setCustomerDeleteId(null);
+                        setDeletionConfirm({});
+                        setCustomerDetailsId(customer.id);
+                      }}>{customer.name}</button></td>
                       <td><a href={`mailto:${customer.email}`}>{customer.email}</a></td>
                       <td>{new Date(customer.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</td>
                       <td><span className={"badge " + (customer.email_verified ? "confirmed" : "being_packed")}>{customer.email_verified ? "Verified" : "Not verified"}</span></td>
@@ -517,7 +532,7 @@ export default function AdminPage() {
                 </nav>
                 {shownCustomers.length === 0 && <div className="empty">{data.customers.length === 0 ? "No customers have registered yet." : "No customers match this search."}</div>}
               </section>
-            )}
+            ))}
             {tab === "gdpr" && (
               <section className="panel table-wrap gdpr-panel">
                 <h2>GDPR Requests</h2>
