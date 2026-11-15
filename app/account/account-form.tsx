@@ -48,6 +48,7 @@ export default function AccountForm({
     modes.includes(initialMode as Mode) ? (initialMode as Mode) : "login",
   );
   const [name, setName] = useState(""),
+    [tiktokId, setTikTokId] = useState(""),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [confirmPassword, setConfirmPassword] = useState(""),
@@ -94,6 +95,7 @@ export default function AccountForm({
         body: JSON.stringify({
           action: mode,
           name,
+          tiktokId,
           email,
           password,
           token: initialToken,
@@ -184,6 +186,10 @@ export default function AccountForm({
                     />
                   </>
                 )}
+                {mode === "register" && <>
+                  <label htmlFor="customer-tiktok">TikTok ID (optional)</label>
+                  <input id="customer-tiktok" value={tiktokId} onChange={e => setTikTokId(e.target.value)} placeholder="@yourusername" maxLength={101} autoCapitalize="none" spellCheck={false} />
+                </>}
                 {usesEmail && (
                   <>
                     <label htmlFor="customer-email">Email address</label>

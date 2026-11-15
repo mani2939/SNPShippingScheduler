@@ -1,24 +1,26 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { tokenHash, validToken } from "./customer-password.ts";
+import { normalTikTokId } from "./customer-profile.ts";
 export type CustomerDB = Pick<PoolClient, "query">;
 export type Customer = {
   id: string;
   name: string;
   email: string;
   email_verified: boolean;
+  tiktok_id: string | null;
 };
 export async function registerCustomer(
   db: CustomerDB,
-  data: { name: string; email: string; passwordHash: string },
+  data: { name: string; email: string; passwordHash: string; tiktokId?: unknown },
 ) {
   await db.query(
-    "INSERT INTO customers(id,name,email,password_hash) VALUES($1,$2,$3,$4) ON CONFLICT(email) DO NOTHING",
-    [randomUUID(), data.name, data.email, data.passwordHash],
+    "INSERT INTO customers(id,name,email,password_hash,tiktok_id) VALUES($1,$2,$3,$4,$5) ON CONFLICT(email) DO NOTHING",
+    [randomUUID(), data.name, data.email, data.passwordHash, normalTikTokId(data.tiktokId)],
   );
   return (
     await db.query(
-      "SELECT id,name,email,email_verified FROM customers WHERE email=$1 FOR UPDATE",
+      "SELECT id,name,email,email_verified,tiktok_id FROM customers WHERE email=$1 FOR UPDATE",
       [data.email],
     )
   ).rows[0] as Customer;
@@ -100,7 +102,7 @@ export async function customerFromSession(
   return (
     (
       await db.query(
-        "SELECT c.id,c.name,c.email,c.email_verified FROM customer_sessions s JOIN customers c ON c.id=s.customer_id WHERE s.token_hash=$1 AND s.expires_at>now() AND c.email_verified=true",
+        "SELECT c.id,c.name,c.email,c.email_verified,c.tiktok_id FROM customer_sessions s JOIN customers c ON c.id=s.customer_id WHERE s.token_hash=$1 AND s.expires_at>now() AND c.email_verified=true",
         [tokenHash(token)],
       )
     ).rows[0] || null

@@ -3,11 +3,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Brand from "./brand";
 import CustomerDashboard from "./customer-dashboard";
+import TikTokProfile from "./tiktok-profile";
 import CustomerAddresses from "./addresses";
 import CustomerOrders from "./orders";
 import CancelDispatch from "./cancel-dispatch";
 import CustomerHistory from "./customer-history";
 import {
+  UserRound,
   LayoutDashboard,
   MapPin,
   Package,
@@ -208,6 +210,7 @@ export default function BookingPage({
               <button aria-pressed={section === "dispatch"} onClick={()=>setSection("dispatch")}><CalendarDays size={18}/><span>Book a dispatch</span></button>
               <button aria-pressed={section === "history"} onClick={()=>setSection("history")}><History size={18}/><span>My bookings</span></button>
               <button aria-pressed={section === "orders"} onClick={()=>setSection("orders")}><Package size={18}/><span>Order history</span></button>
+              <button aria-pressed={section === "profile"} onClick={() => setSection("profile")}><UserRound size={18}/><span>My profile</span></button>
               <button aria-pressed={section === "addresses"} onClick={() => setSection("addresses")}><MapPin size={18}/><span>Addresses</span></button>
             </div>
             <div className="admin-side-group">
@@ -220,7 +223,7 @@ export default function BookingPage({
           <div className="admin-sidebar-foot"><strong>{name}</strong><br/>{email}</div>
         </aside>
         <div className="customer-workspace">
-        {section === "dashboard" ? <CustomerDashboard name={name} onNavigate={setSection}/> : section === "addresses" ? <CustomerAddresses/> : section === "orders" ? <CustomerOrders/> : section === "history" ? <CustomerHistory refreshKey={receipt?.reference || ""} onCancelled={dispatchCancelled}/> : <>
+        {section === "dashboard" ? <CustomerDashboard name={name} onNavigate={setSection}/> : section === "profile" ? <TikTokProfile/> : section === "addresses" ? <CustomerAddresses/> : section === "orders" ? <CustomerOrders/> : section === "history" ? <CustomerHistory refreshKey={receipt?.reference || ""} onCancelled={dispatchCancelled}/> : <>
 
         <div className="eyebrow">SHIPMENT SCHEDULING</div>
         <div className="page-intro">

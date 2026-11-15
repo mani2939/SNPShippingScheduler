@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowLeft, Package } from "lucide-react";
+import TikTokProfile from "../tiktok-profile";
 import CustomerAddresses from "../addresses";
 import type { AdminCustomerDetails } from "../../lib/admin-customers";
 
@@ -55,6 +56,7 @@ export default function CustomerDetails({
             <div><dt>Orders</dt><dd>{customer.order_count}</dd></div>
           </dl>
         </section>
+        <TikTokProfile key={`tiktok-${customer.id}`} endpoint={endpoint} initialValue={customer.tiktok_id} admin />
         <CustomerAddresses key={customer.id} endpoint={`${endpoint}/addresses`} admin />
       </>}
   </div>;

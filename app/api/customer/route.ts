@@ -201,6 +201,7 @@ export async function POST(request: NextRequest) {
           name: input.name.trim(),
           email,
           passwordHash,
+          tiktokId: input.tiktokId,
         });
         return c.email_verified
           ? null
@@ -240,11 +241,11 @@ export async function POST(request: NextRequest) {
     const m = e instanceof Error ? e.message : "";
     return reply(
       {
-        error: /^(Enter a valid email|Request is too large)/.test(m)
+        error: /^(Enter a valid email|Enter a valid TikTok ID|Request is too large)/.test(m)
           ? m
           : "Account service is temporarily unavailable. Please try again.",
       },
-      /^(Enter a valid email|Request is too large)/.test(m) ? 400 : 503,
+      /^(Enter a valid email|Enter a valid TikTok ID|Request is too large)/.test(m) ? 400 : 503,
     );
   }
 }

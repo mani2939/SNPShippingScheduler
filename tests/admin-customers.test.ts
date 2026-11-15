@@ -47,7 +47,7 @@ test("admin customer details report only the selected account and safe summary f
     assert.equal(customer?.active_count,1);
     assert.equal(customer?.order_count,1);
     assert.deepEqual(Object.keys(customer!).sort(),[
-      "active_count","booking_count","created_at","email","email_verified","id","name","order_count",
+      "active_count","booking_count","created_at","email","email_verified","id","name","order_count","tiktok_id",
     ]);
     assert.equal(await adminCustomerDetails(f.db,randomUUID()),undefined);
     assert.equal(await adminCustomerDetails(f.db,"invalid-id"),undefined);

@@ -5,6 +5,7 @@ export type AdminCustomerDetails = {
   name: string;
   email: string;
   email_verified: boolean;
+  tiktok_id: string | null;
   created_at: string;
   booking_count: number;
   active_count: number;
@@ -18,7 +19,7 @@ export function validCustomerId(id: string) {
 export async function adminCustomerDetails(db: CustomerDB, id: string) {
   if (!validCustomerId(id)) return undefined;
   const { rows } = await db.query(
-    `SELECT c.id,c.name,c.email,c.email_verified,c.created_at,
+    `SELECT c.id,c.name,c.email,c.email_verified,c.tiktok_id,c.created_at,
       (SELECT count(*)::int FROM bookings b WHERE b.customer_id=c.id
         OR (b.customer_id IS NULL AND lower(b.email)=lower(c.email))) AS booking_count,
       (SELECT count(*)::int FROM bookings b WHERE

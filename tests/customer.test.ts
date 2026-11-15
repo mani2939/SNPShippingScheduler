@@ -47,12 +47,16 @@ test("customer verification, reset, token expiry and session invalidation", asyn
       name: "Test Customer",
       email: "customer@example.com",
       passwordHash: originalHash,
+      tiktokId: " @test.customer ",
     });
     const duplicate = await registerCustomer(db, {
       name: "An Attacker",
       email: "customer@example.com",
       passwordHash: "invalid",
+      tiktokId: "attacker",
     });
+    assert.equal(c.tiktok_id, "test.customer");
+    assert.equal(duplicate.tiktok_id, "test.customer");
     assert.equal(c.id, duplicate.id);
     assert.equal(duplicate.name, "Test Customer");
     assert.equal(
