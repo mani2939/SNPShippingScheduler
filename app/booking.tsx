@@ -135,7 +135,7 @@ export default function BookingPage({
     ).catch(() => {});
     return () => lifecycle.abort();
   }, []);
-  const visible = days.slice(week * 3, week * 3 + 3);
+  const visible = days.slice(week * 5, week * 5 + 5);
   const day = days.find((d) => d.date === date);
   const available = day?.available || false;
   async function logout() {
@@ -310,7 +310,7 @@ export default function BookingPage({
               </form>
             </div>
           </section>
-          <form onSubmit={submit} className="booking-grid">
+          <form onSubmit={submit} className="booking-grid dispatch-booking">
             <section className="panel selection">
               <div className="section-title">
                 <span className="step">01</span>
@@ -338,7 +338,7 @@ export default function BookingPage({
                   <button
                     aria-label="Later dates"
                     type="button"
-                    disabled={busy || (week + 1) * 3 >= days.length}
+                    disabled={busy || (week + 1) * 5 >= days.length}
                     onClick={() => setWeek((w) => w + 1)}
                   >
                     <ArrowRight size={17} />

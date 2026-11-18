@@ -1537,3 +1537,46 @@ h1, h2, h3 { font-weight: 500; color: var(--ink); }
 .customer-profile .history-heading { margin-bottom: 20px; }
 .customer-profile h2 { margin: 0 0 8px; }
 .customer-profile a { overflow-wrap: anywhere; }
+
+/* Five dispatch dates at a glance, followed by customer details. */
+.booking-grid.dispatch-booking {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+.dispatch-booking > *, .dispatch-booking .date-card { min-width: 0; }
+.dispatch-booking .date-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+.dispatch-booking .date-card { padding: 14px 8px 12px; }
+.dispatch-booking .calendar-toolbar { margin-top: 22px; }
+.dispatch-booking .details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px 28px;
+  align-items: start;
+}
+.dispatch-booking .details > .section-title,
+.dispatch-booking .details > .error,
+.dispatch-booking .details > .primary,
+.dispatch-booking .details > .form-footnote { grid-column: 1 / -1; }
+.dispatch-booking .customer-identity,
+.dispatch-booking .booking-summary,
+.dispatch-booking .form-footnote { margin: 0; }
+.dispatch-booking .customer-identity { overflow-wrap: anywhere; }
+.dispatch-booking .details > .primary { max-width: 360px; justify-self: end; width: 100%; }
+.dispatch-booking .details > .form-footnote { text-align: right; justify-content: flex-end; }
+@media (max-width: 600px) {
+  .dispatch-booking .date-grid { gap: 8px; }
+  .dispatch-booking .date-card { padding: 12px 3px 10px; }
+  .dispatch-booking .date-card strong { font-size: 28px; }
+  .dispatch-booking .date-status { font-size: 10px; overflow-wrap: anywhere; }
+  .dispatch-booking .details { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .dispatch-booking .details > .primary { max-width: none; }
+  .dispatch-booking .details > .form-footnote { text-align: center; justify-content: center; }
+}
+@media (max-width: 420px) {
+  .dispatch-booking .selection { padding: 18px 12px; }
+  .dispatch-booking .date-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dispatch-booking .date-status { font-size: 11px; }
+}
