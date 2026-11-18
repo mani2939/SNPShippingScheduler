@@ -292,6 +292,7 @@ export default function BookingPage({
                 <span className="urgent-card-kicker">PRIORITY REQUEST</span>
                 <h2 id="urgent-dispatch-heading">Need an urgent dispatch?</h2>
                 <p>Ask us to review an earlier date. We’ll email you after an admin makes a decision.</p>
+                <p><strong>£1 extra will be charged for urgent requests.</strong></p>
               </div>
               <button type="button" className="urgent-card-toggle" aria-expanded={urgentMode} aria-controls="urgent-request-form" disabled={busy} onClick={() => {
                 setUrgentMode(open => !open);
