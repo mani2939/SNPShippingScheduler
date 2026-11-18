@@ -4,7 +4,7 @@ import CookieConsent from "./cookie-consent";
 export const metadata: Metadata = {
   title: "Shapes and Pieces | Dispatch",
   description:
-    "Sign in to book your shipment dispatch date on Monday, Wednesday or Friday.",
+    "Sign in to book your shipment dispatch date on Monday to Friday.",
   icons: { icon: "/favicon.svg" },
 };
 export default function RootLayout({

@@ -305,7 +305,7 @@ export default function AccountForm({
           </>}
         </section>
         <p className="account-footer">
-          Shipment dispatch on Monday, Wednesday and Friday.
+          Shipment dispatch on Monday to Friday.
         </p>
       </main>
     </>

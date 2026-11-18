@@ -14,13 +14,13 @@ import {
   nextAvailableSlot,
 } from "../lib/schedule.ts";
 const now = new Date("2026-09-17T10:00:00Z");
-test("schedule exposes only Mon/Wed/Fri with two days' notice and a bounded horizon", () => {
+test("schedule exposes Monday to Friday with two days' notice and a bounded horizon", () => {
   const dates = dispatchDates(defaults, now);
-  assert.equal(dates.length, 17);
+  assert.equal(dates.length, 29);
   assert.equal(dates[0], "2026-09-21");
   assert.ok(
     dates.every((d) =>
-      [1, 3, 5].includes(new Date(d + "T12:00:00Z").getUTCDay()),
+      [1, 2, 3, 4, 5].includes(new Date(d + "T12:00:00Z").getUTCDay()),
     ),
   );
   assert.ok(dates.every((d) => d <= "2026-10-29"));
@@ -28,11 +28,11 @@ test("schedule exposes only Mon/Wed/Fri with two days' notice and a bounded hori
 test("customer bookings require two calendar days while admins can manage tomorrow", () => {
   const tuesday = new Date("2026-10-27T20:00:00Z");
   assert.equal(eligible("2026-10-28", defaults, tuesday), false);
-  assert.equal(dispatchDates(defaults, tuesday)[0], "2026-10-30");
+  assert.equal(dispatchDates(defaults, tuesday)[0], "2026-10-29");
   assert.equal(eligible("2026-10-28", defaults, tuesday, 1), true);
   const sundayNight = new Date("2026-10-25T23:59:00Z");
   assert.equal(eligible("2026-10-26", defaults, sundayNight), false);
-  assert.equal(dispatchDates(defaults, sundayNight)[0], "2026-10-28");
+  assert.equal(dispatchDates(defaults, sundayNight)[0], "2026-10-27");
   assert.equal(eligible("2026-10-28", defaults, new Date("2026-10-26T21:00:00Z")), true);
 });
 test("same-day and invalid weekdays cannot be booked", () => {
@@ -110,6 +110,14 @@ test("database enforces capacity, cancellation release, idempotency and weekdays
     await assert.rejects(insert("slot-2", "2026-09-21", requestId), {
       code: "23505",
     });
+    for (const date of ["2026-09-22", "2026-09-24"]) {
+      for (const slot of ["slot-1", "slot-2", "slot-3"]) await insert(slot, date);
+      await assert.rejects(insert("slot-1", date), { code: "23505" });
+      await assert.rejects(insert("slot-4", date), { code: "23514" });
+    }
+    await assert.rejects(insert("slot-1", "2026-09-20"), { code: "23514" });
+    // Reapplying the reference schema preserves bookings on newly opened days.
+    await db.exec(await readFile(new URL("../lib/schema.sql", import.meta.url), "utf8"));
     await db.exec("BEGIN");
     const b = await insert("slot-2", "2026-09-21");
     await db.query(

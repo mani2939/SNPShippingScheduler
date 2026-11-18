@@ -370,7 +370,7 @@ export default function AdminPage() {
                   {!data.demo && <button type="button" disabled={busy} onClick={()=>void act({action:"logout"},"")}><LogOut size={18}/><span>Sign out</span></button>}
                 </div>
               </nav>
-              <p className="admin-sidebar-foot">Monday · Wednesday · Friday<br />3 places per dispatch day</p>
+              <p className="admin-sidebar-foot">Monday–Friday<br />3 places per dispatch day</p>
             </aside>
             <div className="admin-workspace">
               <div className="admin-intro">
@@ -606,7 +606,7 @@ export default function AdminPage() {
               >
                 <h2>Booking settings</h2>
                 <p className="muted">
-                  Each Monday, Wednesday and Friday has exactly three places.
+                  Each weekday, Monday to Friday, has exactly three places.
                   Customer bookings require at least two calendar days’ notice.
                 </p>
                 <label htmlFor="timezone">Dispatch timezone</label>

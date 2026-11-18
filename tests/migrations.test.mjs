@@ -94,3 +94,29 @@ test("migration command fails closed when SNP_DATABASE_URL is missing", () => {
   assert.equal(result.status, 1);
   assert.match(result.stderr, /requires SNP_DATABASE_URL/);
 });
+
+test("weekday rollout opens Tuesday and Thursday while preserving bookings and weekend urgent approvals", async () => {
+  const db = new PGlite();
+  try {
+    const migrations = await readMigrations();
+    await migrate(client(db), migrations.filter(m => m.name < '0015'), quiet);
+    let count = 0;
+    const insert = (date, slot, urgent = false) => {
+      const id = `00000000-0000-4000-8000-${String(++count).padStart(12,'0')}`;
+      return db.query(`INSERT INTO bookings(id,request_id,reference,name,email,dispatch_date,slot,timezone,urgent)
+        VALUES($1::uuid,$1::uuid,$1::text,'Customer','test@example.com',$2,$3,'Europe/London',$4)`, [id,date,slot,urgent]);
+    };
+    await insert('2026-11-23','slot-1');
+    await assert.rejects(insert('2026-11-24','slot-1'), {code:'23514'});
+    await insert('2026-11-28','slot-1',true);
+    assert.equal(await migrate(client(db), migrations, quiet),1);
+    for (const date of ['2026-11-24','2026-11-26']) {
+      for (const slot of ['slot-1','slot-2','slot-3']) await insert(date,slot);
+      await assert.rejects(insert(date,'slot-1'),{code:'23505'});
+      await assert.rejects(insert(date,'slot-4'),{code:'23514'});
+    }
+    await assert.rejects(insert('2026-11-29','slot-1'),{code:'23514'});
+    assert.equal(await migrate(client(db),migrations,quiet),0);
+    assert.equal((await db.query('SELECT count(*)::int AS count FROM bookings')).rows[0].count,8);
+  } finally {await db.close();}
+});

@@ -235,7 +235,7 @@ export default function BookingPage({
             <CalendarDays size={19} />
             <div>
               <strong>Dispatch days</strong>
-              <span>Monday · Wednesday · Friday</span>
+              <span>Monday–Friday</span>
             </div>
           </div>
         </div>
@@ -465,7 +465,7 @@ export default function BookingPage({
         </>}
         <footer>
           <span>© {new Date().getFullYear()} SNP Dispatch</span>
-          <span>Monday · Wednesday · Friday</span>
+          <span>Monday–Friday</span>
         </footer>
       </div></div></main>
     </>

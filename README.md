@@ -2,7 +2,7 @@
 
 Customer booking site and username-and-password-protected admin portal, prepared for Vercel and `snpdispatch.com`.
 
-- Mondays, Wednesdays and Fridays only.
+- Monday to Friday, with three places each day.
 - Standard customer bookings require at least two calendar days' notice in the configured dispatch timezone. Urgent dates need admin approval.
 - Exactly three places per day. Verified customers select only an available date; capacity counts are private and the server assigns an internal slot automatically. No appointment times.
 - Customer name and email, on-page confirmation and a booking reference.
@@ -136,7 +136,7 @@ The customer and admin portal use Shapes and Pieces styling: Playfair Display he
 
 ## Urgent dispatch requests
 
-Verified customers can submit an urgent request with a reason and optional preferred date. It stays pending without reserving a slot; while pending, that customer cannot make a regular booking or another urgent request. Admins review requests in **Urgent Requests**, assign a date from today through the next 90 days, and approve or reject them. Approval uses an available regular place first; if all three regular places are booked or closed, it adds a dedicated urgent extra place for that request, creates a Confirmed booking, and sends the normal customer email and business WhatsApp alert. Exceptional dates outside Monday/Wednesday/Friday are allowed only through admin approval. Rejection sends the customer an email and releases the customer to book again. Failed rejection emails can be retried in the admin tab; unknown provider outcomes require checking Resend before retrying. The customer page also shows a pending request and the latest rejected request.
+Verified customers can submit an urgent request with a reason and optional preferred date. It stays pending without reserving a slot; while pending, that customer cannot make a regular booking or another urgent request. Admins review requests in **Urgent Requests**, assign a date from today through the next 90 days, and approve or reject them. Approval uses an available regular place first; if all three regular places are booked or closed, it adds a dedicated urgent extra place for that request, creates a Confirmed booking, and sends the normal customer email and business WhatsApp alert. Exceptional dates outside Monday–Friday are allowed only through admin approval. Rejection sends the customer an email and releases the customer to book again. Failed rejection emails can be retried in the admin tab; unknown provider outcomes require checking Resend before retrying. The customer page also shows a pending request and the latest rejected request.
 
 Migration `0005_urgent_requests.sql` runs automatically via `npm run vercel-build` against `SNP_DATABASE_URL` on the next deployment. It creates the urgent queue and safeguards the one-active-request rule at database level. Deploy the entire source folder, including this migration. Production email and WhatsApp delivery still require their configured Vercel environment variables and a live end-to-end check.
 

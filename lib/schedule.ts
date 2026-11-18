@@ -39,7 +39,7 @@ export function eligible(date: string, settings: Settings, now = new Date(), not
   const current = today(settings.timezone, now);
   return (
     validDate(date) &&
-    [1, 3, 5].includes(new Date(date + "T12:00:00Z").getUTCDay()) &&
+    [1, 2, 3, 4, 5].includes(new Date(date + "T12:00:00Z").getUTCDay()) &&
     date >= addDays(current, noticeDays) &&
     date <= addDays(current, settings.horizon)
   );

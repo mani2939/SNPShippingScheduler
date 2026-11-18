@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS bookings (
  slot text NOT NULL CHECK(slot IN ('slot-1','slot-2','slot-3')),
  timezone text NOT NULL, status text NOT NULL DEFAULT 'confirmed' CHECK(status IN ('confirmed','dispatched','cancelled')),
  created_at timestamptz NOT NULL DEFAULT now(),
- CHECK (extract(isodow from dispatch_date::date) IN (1,3,5))
+ CHECK (extract(isodow from dispatch_date::date) IN (1,2,3,4,5))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS one_booking_per_slot ON bookings(dispatch_date,slot) WHERE status <> 'cancelled';
 CREATE TABLE IF NOT EXISTS blocked_slots (dispatch_date text NOT NULL, slot text NOT NULL, PRIMARY KEY(dispatch_date,slot));
@@ -104,7 +104,7 @@ BEGIN
 END;
 $$;
 ALTER TABLE bookings ADD CONSTRAINT bookings_dispatch_day_check
- CHECK (urgent OR extract(isodow from dispatch_date::date) IN (1,3,5));
+ CHECK (urgent OR extract(isodow from dispatch_date::date) IN (1,2,3,4,5));
 
 -- Serialized on customers.id, shared by both request paths.
 CREATE OR REPLACE FUNCTION snp_check_active_booking() RETURNS trigger LANGUAGE plpgsql AS $$
